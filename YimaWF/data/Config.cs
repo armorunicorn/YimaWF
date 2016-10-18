@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace YimaWF.data
 {
+    //保存项目所有的配置信息
     public class Config
     {
         public Dictionary<TargetType, Color> TartgetColor = new Dictionary<TargetType, Color>();
