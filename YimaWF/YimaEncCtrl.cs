@@ -177,6 +177,7 @@ namespace YimaWF
             AppConfig.AloofRadarTarget = Color.Green;
         }
 
+
         #region 画图相关函数
         private void AxYimaEnc_AfterDrawMap(object sender, EventArgs e)
         {
