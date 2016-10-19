@@ -3,8 +3,8 @@
     public enum CURRENT_SUB_OPERATION
     {
         NO_OPERATION = 0,
-        ADD_POTECT_ZONE = 1,
-        ADD_LINE = 0x2,
+        ADD_FORBIDDEN_ZONE = 1,
+        ADD_PIPELINE = 0x2,
         ADD_FACE = 0x4,
         AREA_ZOOM_IN = 0x10,
         ADD_WAYPOINT = 0x20,

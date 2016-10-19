@@ -49,9 +49,12 @@ namespace YimaWF
 
         public int TargetRectFactor = 10;
 
-        private int TargetRectJudgeFactor = 15;
 
+
+        private int TargetRectJudgeFactor = 15;
         private Image plantformImg;
+        private ForbiddenZone curForbiddenZone;
+        private PipeLine curPipeLine;
 
         #region 回调
         public event TargetSelectDelegate TargetSelect;
@@ -197,18 +200,31 @@ namespace YimaWF
                     }
 
                     foreach (var fz in ForbiddenZoneList)
-                        DrawForbiddenZone(g, fz);
+                        DrawForbiddenZone(g, fz, true);
 
                     foreach (var p in PipLineList)
                         DrawPipeLine(g, p);
 
-
+                    //多边形保护区绘制模式
+                    if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
+                    {
+                        //绘制当前正在添加的多边形禁止驶入区
+                        DrawForbiddenZone(g, curForbiddenZone, false);
+                        break;
+                    }
+                    //管道绘制模式
+                    if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
+                    {
+                        DrawPipeLine(g, curPipeLine);
+                        break;
+                    }
+                    //航迹跟踪模式，只显示一条船的航迹
                     if (IsOnOperation(CURRENT_SUB_OPERATION.SHOWING_TRACK))
                     {
                         DrawTargetTrack(g, CurShowingTrackTarget);
                         break;
                     }
-                    //画船
+                    //数据回放模式，现在只显示ais回放
                     if (IsOnOperation(CURRENT_SUB_OPERATION.PLAYBACK))
                     {
                         foreach (var t in AISTargetPlaybackDic.Values)
@@ -217,6 +233,7 @@ namespace YimaWF
                         }
                         break;
                     }
+                    //以上模式都不会绘制当前目标，只有当不在以上模式的时候，才开始绘制当前目标
                     Target selectedTarget = null;
                     if (showAISTarget)
                         foreach (var t in AISTargetDic.Values)
@@ -473,7 +490,7 @@ namespace YimaWF
             }
         }
 
-        private void DrawForbiddenZone(Graphics g, ForbiddenZone fz)
+        private void DrawForbiddenZone(Graphics g, ForbiddenZone fz, bool drawPolygon)
         {
             var pen = new Pen(AppConfig.ProtectZonePen);
             pen.DashStyle = DashStyle.Custom;
@@ -486,7 +503,10 @@ namespace YimaWF
                 axYimaEnc.GetScrnPoFromGeoPo(p.x, p.y, ref curX, ref curY);
                 list.Add(new Point(curX, curY));
             }
-            g.DrawPolygon(pen, list.ToArray());
+            if (drawPolygon)
+                g.DrawPolygon(pen, list.ToArray());
+            else
+                g.DrawLines(pen, list.ToArray());
         }
 
         private void DrawPipeLine(Graphics g, PipeLine p)
@@ -594,27 +614,28 @@ namespace YimaWF
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
+            int geoPoX = 0, geoPoY = 0;
             if (e.Button == MouseButtons.Left)
             {
                 if (IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) || IsOnOperation(CURRENT_SUB_OPERATION.SHOWING_TRACK)
                     || IsOnOperation(CURRENT_SUB_OPERATION.PLAYBACK))
                 {
                     //SetOperation(CURRENT_SUB_OPERATION.HAND_ROAM);
-                    m_bHasPressedDragStartPo = true;
-                    m_mouseDragFirstPo = new Point(e.Location.X, e.Location.Y);
+                    //m_bHasPressedDragStartPo = true;
+                    //m_mouseDragFirstPo = new Point(e.Location.X, e.Location.Y);
                 }
-                else if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_USER_LAYER_OBJ))
+               /* else if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_USER_LAYER_OBJ))
                 {
                     int geoPoX = 0, geoPoY = 0;
                     axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
                     if (m_iEditingUserMapLayerNum != -1)
                     {
-                        if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_LINE) || IsOnOperation(CURRENT_SUB_OPERATION.ADD_FACE))
+                        if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE) || IsOnOperation(CURRENT_SUB_OPERATION.ADD_FACE))
                         {
                             start_point = e.Location;
                             //bool bSucAddObject = true;
                             //int editObjPos = 0;// axYimaEnc1.tmGetLayerObjectCount(m_iEditingUserMapLayerNum) - 1;
-                            /*if (m_editingLineGeoPoints.Count == 0)
+                            if (m_editingLineGeoPoints.Count == 0)
                             {
                                 if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_FACE))
                                 {
@@ -622,7 +643,7 @@ namespace YimaWF
                                 }
                                 editObjPos = axYimaEnc1.tmGetLayerObjectCount(m_iEditingUserMapLayerNum) - 1;
                                 axYimaEnc1.tmSetObjectDynamicObjectOrNot(m_iEditingUserMapLayerNum, editObjPos, true);
-                            }*/
+                            }
                             if (m_iEditingUserMapLayerNum > 0)
                             {
                                 m_editingLineGeoPoints.Add(new GeoPoint(geoPoX, geoPoY));
@@ -637,11 +658,23 @@ namespace YimaWF
                             m_editingLineGeoPoints.Add(new GeoPoint(m_editingLineGeoPoints.Last()));
                             //m_iEditingPointPosOnEditingLine = m_nEditingLinePointCount - 1;
 
-                            if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_LINE) || IsOnOperation(CURRENT_SUB_OPERATION.ADD_FACE))
+                            if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE) || IsOnOperation(CURRENT_SUB_OPERATION.ADD_FACE))
                             {
                             }
                         }
                     }
+                }*/
+                else if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
+                {
+                    axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
+                    curForbiddenZone.PointList.Add(new GeoPoint(geoPoX, geoPoY));
+                    Invalidate();
+                }
+                else if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
+                {
+                    axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
+                    curPipeLine.PointList.Add(new GeoPoint(geoPoX, geoPoY));
+                    Invalidate();
                 }
             }
         }
@@ -791,8 +824,13 @@ namespace YimaWF
         private Target GetClickTarget(Point p)
         {
             int x = 0, y = 0;
-            Dictionary<int, Target>.ValueCollection[] values = new Dictionary<int, Target>.ValueCollection[]
-            { AISTargetDic.Values, RadarTargetDic.Values, MergeTargetDic.Values };
+            List<Dictionary<int, Target>.ValueCollection> values = new List<Dictionary<int, Target>.ValueCollection>(3);
+            if (showAISTarget)
+                values.Add(AISTargetDic.Values);
+            if (showRadarTarget)
+                values.Add(RadarTargetDic.Values);
+            if (showMergeTarget)
+                values.Add(MergeTargetDic.Values);
             foreach (var d in values)
                 foreach(var t in d)
                 {
@@ -1230,18 +1268,53 @@ namespace YimaWF
             Invalidate();
         }
 
-        public void StartAddProtectZone()
+        public void StartAddForbiddenZone()
         {
             if(IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION))
             {
-                SetOperation(CURRENT_SUB_OPERATION.ADD_POTECT_ZONE);
+                SetOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE);
+                curForbiddenZone = new ForbiddenZone();
+                Invalidate();
             }
         }
 
-        public void EndAddProtectZone()
+        public ForbiddenZone EndAddForbiddenZone()
         {
-            if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_POTECT_ZONE))
-                ClearOperation(CURRENT_SUB_OPERATION.ADD_POTECT_ZONE);
+            ForbiddenZone tmp = null;
+            if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
+            {
+                ForbiddenZoneList.Add(curForbiddenZone);
+                tmp = curForbiddenZone;
+                curForbiddenZone = null;
+                ClearOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE);
+                Invalidate();
+            }
+            return tmp;
+        }
+
+        public void StartAddPipeLine()
+        {
+            if (IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION))
+            {
+                SetOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE);
+                curPipeLine = new PipeLine();
+                Invalidate();
+            }
+        }
+
+        public PipeLine EndAddPipeLine()
+        {
+            PipeLine pipe = null;
+            if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
+            {
+                PipLineList.Add(curPipeLine);
+                pipe = curPipeLine;
+                curPipeLine = null;
+                ClearOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE);
+                Invalidate();
+            }
+
+            return pipe;
         }
 
         #endregion
