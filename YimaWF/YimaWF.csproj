@@ -51,6 +51,7 @@
   <ItemGroup>
     <Compile Include="data\Config.cs" />
     <Compile Include="data\ForbiddenZone.cs" />
+    <Compile Include="data\MapInfo.cs" />
     <Compile Include="data\PipeLine.cs" />
     <Compile Include="data\ProtectZone.cs" />
     <Compile Include="data\Target.cs" />

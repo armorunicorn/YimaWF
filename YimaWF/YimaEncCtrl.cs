@@ -155,7 +155,6 @@ namespace YimaWF
             plantformImg = Resources.PlantformImg;
 
             //测试代码
-
         }
 
         private void AxYimaEnc_DrawRadar(object sender, EventArgs e)
@@ -1316,9 +1315,120 @@ namespace YimaWF
 
             return pipe;
         }
+        //图库管理接口
+        public List<string> GetMapList()
+        {
+            List<string> list = new List<string>();
+            int libMapCount = axYimaEnc.GetLibMapCount();
+            Console.WriteLine(libMapCount);
+            string mapName = "                    ";
+            string mapType = null;
+            float tmp1 = 0;
+            int tmp2 = 0;
+            for(int i = 0; i < libMapCount; i++)
+            {
+                axYimaEnc.GetLibMapInfo(i, ref mapType, ref mapName, ref tmp1, ref tmp2, ref tmp2, 
+                    ref tmp2, ref tmp2, ref tmp2, ref tmp2);
+                list.Add(mapName);
+            }
+            return list;
+        }
+
+
+        public MapInfo GetMapInfo(int libMapPos)
+        {
+            if (libMapPos < 0 || libMapPos >= axYimaEnc.GetLibMapCount())
+                return null;
+            MapInfo info = new MapInfo();
+            float originalScale = 0;
+            int left = 0, right = 0, up = 0, down = 0;
+            int editionNum = 0, updateEdtNum = 0;
+            string tmp = null;
+            axYimaEnc.GetLibMapInfo(libMapPos, ref tmp, ref tmp, ref originalScale, ref left, ref right,
+                ref up, ref down, ref editionNum, ref updateEdtNum);
+            info.OriginalScale = originalScale;
+            info.Left = left;
+            info.Right = right;
+            info.Up = up;
+            info.Down = down;
+            info.EditionNum = editionNum;
+            info.UpdateEdtNum = updateEdtNum;
+            int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
+            info.LeftStrBndry = GetDegreeStringFromGeoCoor(true, left, iGeoCoorMultiFactor);
+            info.RightStrBndry = GetDegreeStringFromGeoCoor(true, right, iGeoCoorMultiFactor);
+            info.UpStrBndry = GetDegreeStringFromGeoCoor(false, up, iGeoCoorMultiFactor);
+            info.DownStrBndry = GetDegreeStringFromGeoCoor(false, down, iGeoCoorMultiFactor);
+
+            tmp = "         ";
+            axYimaEnc.GetLibMapEditionIssueDate(libMapPos, updateEdtNum, ref tmp);
+            info.EditDate = tmp;
+            return info;
+        }
+
+        public bool AddMap(string mapPath)
+        {
+            return axYimaEnc.AddMapToLib(mapPath);
+        }
+
+        public void DeleteMap(int libMapPos)
+        {
+            if (libMapPos < 0 || libMapPos >= axYimaEnc.GetLibMapCount())
+                return;
+
+            axYimaEnc.DeleteLibMap(libMapPos);
+        }
+
+        public void OverViewMap(int libMapPos)
+        {
+            if (libMapPos < 0 || libMapPos >= axYimaEnc.GetLibMapCount())
+                return;
+            axYimaEnc.OverViewLibMap(libMapPos);
+        }
 
         #endregion
 
+
+        private string GetDegreeStringFromGeoCoor(bool bLongOrLatiCoor,
+                                int coorVal, int coorMultiFactor)
+        {
+            if (coorMultiFactor == 0)
+                return null;
+
+            double fArcByDegree = coorVal / (float)coorMultiFactor;
+            string retDegreeString = null;
+
+            if (bLongOrLatiCoor)
+            {
+                if (fArcByDegree >= 0)
+                {
+                    Console.WriteLine(fArcByDegree);
+                    retDegreeString = string.Format("{0:D3}度{1:000000.000}分E", (int)fArcByDegree,
+                        60 * (fArcByDegree % 1));
+                }
+                else
+                {
+                    fArcByDegree = -fArcByDegree;
+                    retDegreeString = string.Format("{0:D3}度{1:000000.000}分W", (int)fArcByDegree,
+                        60 * (fArcByDegree - (int)fArcByDegree));
+                }
+            }
+            else
+            {
+                if (fArcByDegree >= 0)
+                {
+                    retDegreeString = string.Format("{0:D3}度{1:000000.000}分N", (int)fArcByDegree,
+                        60 * (fArcByDegree - (int)fArcByDegree));
+                }
+                else
+                {
+                    fArcByDegree = -fArcByDegree;
+                    retDegreeString = string.Format("{0:D3}度{1:000000.000}分S", (int)fArcByDegree,
+                        60 * (fArcByDegree - (int)fArcByDegree));
+                }
+            }
+
+            return retDegreeString;
+        }
 
     }
 }
