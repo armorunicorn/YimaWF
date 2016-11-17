@@ -583,6 +583,18 @@ namespace YimaWF
         {
             CurScale.Text = string.Format("1:{0}", axYimaEnc.GetCurrentScale());
         }
+        
+        #region 图标大小随比例尺变化功能（待完成）
+        private int lastScale = 10;
+        private void RefreshIconWithScale()
+        {
+            if(axYimaEnc.GetCurrentScale()!=lastScale)
+            {
+                //加入改变图标大小的绘图操作
+                lastScale = axYimaEnc.GetCurrentScale();
+            }
+        }
+        #endregion
 
         #region 鼠标事件
         protected override void OnMouseWheel(MouseEventArgs e)
