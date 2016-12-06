@@ -50,11 +50,14 @@ namespace YimaWF
         public int TargetRectFactor = 10;
 
 
-
+        //一些海图内部使用的全局变量
         private int TargetRectJudgeFactor = 15;
         private Image plantformImg;
+        private Image largeTargetImg;
         private ForbiddenZone curForbiddenZone;
         private PipeLine curPipeLine;
+        //目标图片切换的比例尺
+        private int targetChangeScale = 2107260;
 
         #region 回调
         public event TargetSelectDelegate TargetSelect;
@@ -72,12 +75,16 @@ namespace YimaWF
         Point m_mouseDragFirstPo;
 
         #region 雷达相关
-        //
+        //双timer中用来存储海图绘制出来的图片（没有雷达和光电）
         private Bitmap backgroundBtm;
+        private Radar radar1;
+        private Radar radar2;
+
         private Color cScanColor = Color.FromArgb(0, 255, 0);
         private int startAngle = 0;
-        //圆的半径
+        //雷达圆在图上的半径（像素）
         private float radius;
+        //雷达的物理半径（毫米）
         private int geoRadius;
         //天线点value的下限值
         private float min = 0;
@@ -88,14 +95,19 @@ namespace YimaWF
 
         #region 光电相关
         private Color oScanColor = Color.FromArgb(100, 227, 207, 87);
+        //光电设备当前的角度
         private int optStartAngle = 50;
         private int optStep = 1;
+        //光电设备扫描的
         private int optMaxAngle = 170;
-        //圆的直径
+        //海图直径
         private float optDiameter;
-        //圆的半径
+        //海图半径（像素）
         private float optRadius;
+        //物理半径（毫米）
         private int optGeoRadius;
+        //光电扫描扇形宽度
+        private int optScanAngle = 10;
         #endregion
 
         #region 切换显示
@@ -117,6 +129,7 @@ namespace YimaWF
         {
             InitializeComponent();
             InitConfig();
+            
             YimaEnc = axYimaEnc;
 
             SetStyle(ControlStyles.UserPaint, true);
@@ -133,9 +146,11 @@ namespace YimaWF
 
             axYimaEnc.SetCurrentScale(123333);
             axYimaEnc.CenterMap(platformGeoPo.x, platformGeoPo.y);
+            Init();
+            //雷达范围默认20km
             geoRadius = 20000000;
             radius = axYimaEnc.GetScrnLenFromGeoLen(geoRadius);
-            Console.WriteLine(radius);
+            //Console.WriteLine(radius);
             optGeoRadius = 5000000;
             optRadius = axYimaEnc.GetScrnLenFromGeoLen(optGeoRadius);
             //初始化控件显示区大小
@@ -148,18 +163,38 @@ namespace YimaWF
             axYimaEnc.RefreshDrawer(axYimaEnc.Handle.ToInt32(), axYimaEnc.Width, axYimaEnc.Height, 0, 0);
             axYimaEnc.AfterDrawMap += AxYimaEnc_AfterDrawMap;
             RefreshScaleStatusBar();
-            axYimaEnc.DrawRadar += AxYimaEnc_DrawRadar;
-            RadarTimer.Enabled = true;
+            //axYimaEnc.DrawRadar += AxYimaEnc_DrawRadar;
+            RadarTimer.Enabled = false;
 
             //加载平台图片
             plantformImg = Resources.PlantformImg;
+            //加载目标大图标
+            largeTargetImg = Resources.LargeTargetImg;
 
             //测试代码
         }
 
         private void AxYimaEnc_DrawRadar(object sender, EventArgs e)
         {
-            Console.WriteLine("1");
+            //Console.WriteLine("1");
+        }
+
+        private void Init()
+        {
+            //雷达1初始化
+            radar1 = new Radar();
+            radar1.ID = 1;
+            radar1.CurAngle = 0;
+            radar1.GeoRadius = 20000000;
+            radar1.ScanColor = Color.FromArgb(0, 255, 0);
+            radar1.Radius = axYimaEnc.GetScrnLenFromGeoLen(radar1.GeoRadius);
+            //雷达2初始化
+            radar2 = new Radar();
+            radar2.ID = 2;
+            radar2.CurAngle = 180;
+            radar2.GeoRadius = 20000000;
+            radar2.ScanColor = Color.FromArgb(0, 255, 255);
+            radar2.Radius = axYimaEnc.GetScrnLenFromGeoLen(radar2.GeoRadius);
         }
 
         private void InitConfig()
@@ -267,6 +302,34 @@ namespace YimaWF
                         }
                     if (selectedTarget != null)
                         DrawTarget(g, selectedTarget);
+                    //自动设置雷达扫描的角度
+                    radar1.CurAngle++;
+                    if (radar1.CurAngle > 360)
+                        radar1.CurAngle = 0;
+                    radar2.CurAngle++;
+                    if (radar2.CurAngle > 360)
+                        radar2.CurAngle = 0;
+                    /*
+                     * 自动增加光电扫描扇形的角度，这里取消自动增加，以后都通过数据来控制当前角度
+                    optRate++;
+                    if (optRate == 3)
+                    {
+                        if (optStartAngle + optStep > optMaxAngle || optStartAngle + optStep < 0)
+                        {
+                            optStep = -optStep;
+                        }
+                        optStartAngle += optStep;
+                        optRate = 0;
+                    }
+                    */
+
+                    if (showRadar)
+                    {
+                        drawScan(g, radar1);
+                        drawScan(g, radar2);
+                    }
+                    if (showOpt)
+                        drawOptScan(g, optStartAngle);
                 }
                 catch
                 {
@@ -295,151 +358,160 @@ namespace YimaWF
 
             int curX = 0, curY = 0;
             axYimaEnc.GetScrnPoFromGeoPo(curGeoPoint.Point.x, curGeoPoint.Point.y, ref curX, ref curY);
-
-            Point A = new Point(), B = new Point(), C = new Point(), D = new Point();
-            if (t.Source == TargetSource.AIS)
+            if (axYimaEnc.GetCurrentScale() < targetChangeScale)
             {
-                //三角形
-                //Point A = new Point(), B = new Point(), C = new Point(), D = new Point();
-                A.X = curX;
-                A.Y = curY - TargetRectFactor;
-                B.X = curX - TargetRectFactor;
-                B.Y = curY + TargetRectFactor;
-                C.X = curX + TargetRectFactor;
-                C.Y = curY + TargetRectFactor;
-                D.X = A.X;
-                D.Y = A.Y - Convert.ToInt32(t.Speed * 5);
-                //根据船的航向旋转三角形
-                Rotate(t.Heading, ref A, ref B, ref C, ref D, new Point(curX, curY));
-                Point[] points = { A, B, C };
-                //画出船的图标
-                g.FillPolygon(brush, points);
-                g.DrawLine(pen, A, D);
-            }
-            else if(t.Source == TargetSource.Merge)
-            {
-                //矩形
-                A.X = curX - TargetRectFactor;
-                A.Y = curY - TargetRectFactor;
-                B.X = curX + TargetRectFactor;
-                B.Y = curY - TargetRectFactor;
-                C.X = curX + TargetRectFactor;
-                C.Y = curY + TargetRectFactor;
-                D.X = curX - TargetRectFactor;
-                D.Y = curY + TargetRectFactor;
-                //根据船的航向旋转图形
-                Rotate(t.Heading, ref A, ref B, ref C, ref D, new Point(curX, curY));
-                Point[] points = { A, B, C, D };
-                //画出船的图标
-                g.FillPolygon(brush, points);
-            }
-            else if (t.Source == TargetSource.Radar)
-            {
-                //圆形
-                A.X = curX - TargetRectFactor / 2;
-                A.Y = curY - TargetRectFactor / 2;
-                B = A;
-                var rect = new Rectangle(A.X, A.Y,
-                    TargetRectFactor, TargetRectFactor);
-                if(t.IsApproach)
+                //只有当比例尺较小时才绘制复杂信息（三角、标牌等）
+                Point A = new Point(), B = new Point(), C = new Point(), D = new Point();
+                if (t.Source == TargetSource.AIS)
                 {
-                    brush = new SolidBrush(AppConfig.ApproachRadarTarget);
+                    //三角形
+                    //Point A = new Point(), B = new Point(), C = new Point(), D = new Point();
+                    A.X = curX;
+                    A.Y = curY - TargetRectFactor;
+                    B.X = curX - TargetRectFactor;
+                    B.Y = curY + TargetRectFactor;
+                    C.X = curX + TargetRectFactor;
+                    C.Y = curY + TargetRectFactor;
+                    D.X = A.X;
+                    D.Y = A.Y - Convert.ToInt32(t.Speed * 5);
+                    //根据船的航向旋转三角形
+                    Rotate(t.Heading, ref A, ref B, ref C, ref D, new Point(curX, curY));
+                    Point[] points = { A, B, C };
+                    //画出船的图标
+                    g.FillPolygon(brush, points);
+                    g.DrawLine(pen, A, D);
+                }
+                else if (t.Source == TargetSource.Merge)
+                {
+                    //矩形
+                    A.X = curX - TargetRectFactor;
+                    A.Y = curY - TargetRectFactor;
+                    B.X = curX + TargetRectFactor;
+                    B.Y = curY - TargetRectFactor;
+                    C.X = curX + TargetRectFactor;
+                    C.Y = curY + TargetRectFactor;
+                    D.X = curX - TargetRectFactor;
+                    D.Y = curY + TargetRectFactor;
+                    //根据船的航向旋转图形
+                    Rotate(t.Heading, ref A, ref B, ref C, ref D, new Point(curX, curY));
+                    Point[] points = { A, B, C, D };
+                    //画出船的图标
+                    g.FillPolygon(brush, points);
+                }
+                else if (t.Source == TargetSource.Radar)
+                {
+                    //圆形
+                    A.X = curX - TargetRectFactor / 2;
+                    A.Y = curY - TargetRectFactor / 2;
+                    B = A;
+                    var rect = new Rectangle(A.X, A.Y,
+                        TargetRectFactor, TargetRectFactor);
+                    if (t.IsApproach)
+                    {
+                        brush = new SolidBrush(AppConfig.ApproachRadarTarget);
+                    }
+                    else
+                    {
+                        brush = new SolidBrush(AppConfig.AloofRadarTarget);
+                    }
+                    g.FillEllipse(brush, rect);
+                }
+
+
+                //画出船的状态
+                string statusStr;
+                Brush statusBrush;
+                Rectangle statusRect;
+                if (t.ShowSignTime == 0)
+                {
+                    //显示简略信息
+                    statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts\n{3}", t.Name, 360 - t.Heading, t.Speed, t.ArriveTime);
+                    if (t.IsCheck)
+                    {
+
+                        statusBrush = Brushes.Green;
+                    }
+                    else
+                    {
+                        //statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts", t.CallSign, 360 - t.Heading, t.Speed);
+                        statusBrush = Brushes.Black;
+                    }
+
+                    if (t.Source == TargetSource.Merge)
+                    {
+                        statusRect = new Rectangle(B.X + TargetRectFactor, B.Y, 80, 60);
+                    }
+                    else
+                    {
+                        statusRect = new Rectangle(B.X - 80, A.Y - 8 - 10, 80, 60);
+                    }
+                    g.DrawString(statusStr, AppConfig.TargetStatusFont, statusBrush, statusRect);
                 }
                 else
                 {
-                    brush = new SolidBrush(AppConfig.AloofRadarTarget);
+                    //显示基础信息（小标牌）
+                    statusRect = new Rectangle(B.X - 130 - 20, A.Y - 8 - 10, 140, 90);
+                    statusStr = string.Format("{0} {1} {2} {3}\nMMSI:{4}\nIMO:{5}\n{6:F2}° {7:F2} kts",
+                        t.Source.ToString(), t.Name, t.Nationality, t.CallSign,
+                        t.MIMSI,
+                        t.IMO,
+                        360 - t.Heading, t.Speed);
+                    statusBrush = new SolidBrush(Color.FromArgb(255, Color.BurlyWood));
+                    g.FillRectangle(statusBrush, statusRect);
+                    g.DrawString(statusStr, AppConfig.TargetStatusFont, Brushes.Black, statusRect);
                 }
-                g.FillEllipse(brush, rect);
-            }
-            
-
-            //画出船的状态
-            string statusStr;
-            Brush statusBrush;
-            Rectangle statusRect;
-            if (t.ShowSignTime == 0)
-            {
-                //显示简略信息
-                statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts\n{3}", t.Name, 360 - t.Heading, t.Speed, t.ArriveTime);
                 if (t.IsCheck)
                 {
-                    
-                    statusBrush = Brushes.Green;
+                    var factor = TargetRectFactor + 4;
+                    A.X = curX - factor;
+                    A.Y = curY - factor;
+                    B.X = curX + factor;
+                    B.Y = curY - factor;
+                    C.X = curX + factor;
+                    C.Y = curY + factor;
+                    D.X = curX - factor;
+                    D.Y = curY + factor;
+                    //根据船的航向旋转图形
+                    Rotate(t.Heading, ref A, ref B, ref C, ref D, new Point(curX, curY));
+                    //画出船的图标
+                    g.DrawPolygon(AppConfig.TargetSelectPen, new Point[] { A, B, C, D });
                 }
-                else
+                //画出尾迹
+                if (t.Track.Count > 1)
                 {
-                    //statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts", t.CallSign, 360 - t.Heading, t.Speed);
-                    statusBrush = Brushes.Black;
+                    if (t.ShowTrack)
+                    {
+                        List<Point> list = new List<Point>();
+                        foreach (var p in t.Track)
+                        {
+                            axYimaEnc.GetScrnPoFromGeoPo(p.Point.x, p.Point.y, ref curX, ref curY);
+                            //Console.WriteLine("{0}, {1}", curX, curY);
+                            list.Add(new Point(curX, curY));
+                        }
+                        //Console.WriteLine("------------------------");
+                        pen.Width = 3;
+                        pen.DashStyle = DashStyle.Dot;
+                        g.DrawCurve(pen, list.ToArray());
+                    }
+                    else
+                    {
+                        pen.Width = 3;
+                        pen.DashStyle = DashStyle.Dot;
+                        var currentGeo = t.Track.Last().Point;
+                        axYimaEnc.GetScrnPoFromGeoPo(currentGeo.x, currentGeo.y, ref curX, ref curY);
+                        C.X = curX; C.Y = curY;
+                        currentGeo = t.Track[t.Track.Count - 2].Point;
+                        axYimaEnc.GetScrnPoFromGeoPo(currentGeo.x, currentGeo.y, ref curX, ref curY);
+                        D.X = curX; D.Y = curY;
+                        g.DrawLine(pen, C, D);
+                    }
                 }
-                
-                if (t.Source == TargetSource.Merge)
-                {
-                    statusRect = new Rectangle(B.X + TargetRectFactor, B.Y, 80, 60);
-                }
-                else
-                {
-                    statusRect = new Rectangle(B.X - 80, A.Y - 8 - 10, 80, 60);
-                }
-                g.DrawString(statusStr, AppConfig.TargetStatusFont, statusBrush, statusRect);
             }
             else
             {
-                //显示基础信息（小标牌）
-                statusRect = new Rectangle(B.X - 130 - 20, A.Y - 8 - 10, 140, 90);
-                statusStr = string.Format("{0} {1} {2} {3}\nMMSI:{4}\nIMO:{5}\n{6:F2}° {7:F2} kts", 
-                    t.Source.ToString(), t.Name, t.Nationality, t.CallSign,
-                    t.MIMSI,
-                    t.IMO,
-                    360 - t.Heading, t.Speed);
-                statusBrush = new SolidBrush(Color.FromArgb(255, Color.BurlyWood));
-                g.FillRectangle(statusBrush, statusRect);
-                g.DrawString(statusStr, AppConfig.TargetStatusFont, Brushes.Black, statusRect);
-            }
-            if (t.IsCheck)
-            {
-                var factor = TargetRectFactor + 4;
-                A.X = curX - factor;
-                A.Y = curY - factor;
-                B.X = curX + factor;
-                B.Y = curY - factor;
-                C.X = curX + factor;
-                C.Y = curY + factor;
-                D.X = curX - factor;
-                D.Y = curY + factor;
-                //根据船的航向旋转图形
-                Rotate(t.Heading, ref A, ref B, ref C, ref D, new Point(curX, curY));
-                //画出船的图标
-                g.DrawPolygon(AppConfig.TargetSelectPen, new Point[] { A, B, C, D });
-            }
-            //画出尾迹
-            if (t.Track.Count > 1)
-            {
-                if (t.ShowTrack)
-                {
-                    List<Point> list = new List<Point>();
-                    foreach (var p in t.Track)
-                    {
-                        axYimaEnc.GetScrnPoFromGeoPo(p.Point.x, p.Point.y, ref curX, ref curY);
-                        //Console.WriteLine("{0}, {1}", curX, curY);
-                        list.Add(new Point(curX, curY));
-                    }
-                    //Console.WriteLine("------------------------");
-                    pen.Width = 3;
-                    pen.DashStyle = DashStyle.Dot;
-                    g.DrawCurve(pen, list.ToArray());
-                }
-                else
-                {
-                    pen.Width = 3;
-                    pen.DashStyle = DashStyle.Dot;
-                    var currentGeo = t.Track.Last().Point;
-                    axYimaEnc.GetScrnPoFromGeoPo(currentGeo.x, currentGeo.y, ref curX, ref curY);
-                    C.X = curX; C.Y = curY;
-                    currentGeo = t.Track[t.Track.Count - 2].Point;
-                    axYimaEnc.GetScrnPoFromGeoPo(currentGeo.x, currentGeo.y, ref curX, ref curY);
-                    D.X = curX; D.Y = curY;
-                    g.DrawLine(pen, C, D);
-                }
+                //大比例尺时则只绘制目标大图标（图片）
+                var rect = new Rectangle(curX - 16, curY - 16, 32, 32);
+                g.DrawImage(largeTargetImg, rect);
             }
         }
 
@@ -530,6 +602,11 @@ namespace YimaWF
             g.DrawLines(pen, list.ToArray());
         }
 
+        private void DrawAlarm(Graphics g, Alarm a)
+        {
+
+        }
+
         private void Rotate(float heading, ref Point A, ref Point B, ref Point C, ref Point D, Point O)
         {
             double angle = (double)(heading  * Math.PI / 180);
@@ -603,8 +680,10 @@ namespace YimaWF
                     axYimaEnc.SetCurrentScale(axYimaEnc.GetCurrentScale() * (float)1.5);
                 }
                 RefreshScaleStatusBar();
-                radius = axYimaEnc.GetScrnLenFromGeoLen(geoRadius);
-                Console.WriteLine(radius);
+                //radius = axYimaEnc.GetScrnLenFromGeoLen(geoRadius);
+                //更新雷达半径的长度
+                radar1.Radius = axYimaEnc.GetScrnLenFromGeoLen(radar1.GeoRadius);
+                radar2.Radius = axYimaEnc.GetScrnLenFromGeoLen(radar2.GeoRadius);
                 optRadius = axYimaEnc.GetScrnLenFromGeoLen(optGeoRadius);
                 Invalidate();
             }
@@ -880,16 +959,6 @@ namespace YimaWF
             m_curOperation &= ~subOperation;
         }
 
-        public void SetDisplayCategory(DISPLAY_CATEGORY_NUM displayType)
-        {
-            axYimaEnc.SetDisplayCategory((short)displayType);
-        }
-
-        public void SetPlatform(GeoPoint p)
-        {
-            platformGeoPo = p;
-        }
-
         private void TargetDataTimer_Tick(object sender, EventArgs e)
         {
             if (CurSelectedTarget != null)
@@ -946,8 +1015,8 @@ namespace YimaWF
 
             //g2.CopyFromScreen(PointToScreen(new Point(0, 0)), new Point(0, 0), ClientRect.Size);
             //g.DrawImage(backgroundBtm, 0, 0);
-            if(showRadar)
-                drawScan(g4, startAngle);
+            //if(showRadar)
+            //    drawScan(g4, startAngle);
             if(showOpt)
                 drawOptScan(g4, optStartAngle);
             g.DrawImage(b2, 0, 0);
@@ -964,10 +1033,10 @@ namespace YimaWF
         }
 
 
-        private PointF getMappedPoint(float angle, float value, int x, int y)
+        private PointF getMappedPoint(float angle, float value, int x, int y, float scanRadius)
         {
             // 计算映射在坐标图中的半径  
-            float r = radius * (value - min) / (max - min);
+            float r = scanRadius * (value - min) / (max - min);
             
             // 计算GDI+坐标  
             PointF pt = new PointF();
@@ -977,7 +1046,7 @@ namespace YimaWF
         }
 
         //绘扫描线
-        private void drawScan(Graphics g, int angle)
+        private void drawScan(Graphics g, Radar radar)
         {
             int scanAngle = 30;
             PointF point1 = new PointF();
@@ -989,11 +1058,11 @@ namespace YimaWF
             Point center = new Point(curX, curY);
 
 
-            point1 = getMappedPoint(angle, max, curX, curY);
-            int angle2 = (angle + scanAngle) > 360 ? (angle + scanAngle - 360) : (angle + scanAngle);
-            point2 = getMappedPoint(angle2, max, curX, curY);
+            point1 = getMappedPoint(radar.CurAngle, max, curX, curY, radar.Radius);
+            int angle2 = (radar.CurAngle + scanAngle) > 360 ? (radar.CurAngle + scanAngle - 360) : (radar.CurAngle + scanAngle);
+            point2 = getMappedPoint(angle2, max, curX, curY, radar.Radius);
             int angle3 = (angle2 + scanAngle) > 360 ? (angle2 + scanAngle - 360) : (angle2 + scanAngle);
-            point3 = getMappedPoint(angle3, max, curX, curY);
+            point3 = getMappedPoint(angle3, max, curX, curY, radar.Radius);
             //g.DrawLine(Pens.Red, center, point1);
 
             GraphicsPath gp = new GraphicsPath(FillMode.Winding);
@@ -1005,7 +1074,7 @@ namespace YimaWF
             //SolidBrush pgb = new SolidBrush(gp);
 
             pgb.CenterPoint = point3;
-            pgb.CenterColor = cScanColor;//Color.FromArgb(128, Color.FromArgb(0, 255, 0));
+            pgb.CenterColor = radar.ScanColor;//Color.FromArgb(128, Color.FromArgb(0, 255, 0));
             pgb.SurroundColors = new Color[] { Color.Empty };
             //pgb.SurroundColors = new Color[] { cScanColor };
             // draw the fade path
@@ -1020,7 +1089,7 @@ namespace YimaWF
         #region 光电绘图函数
         private void drawOptScan(Graphics g, int angle)
         {
-            int scanAngle = 10;
+            int scanAngle = optScanAngle;
             PointF point1 = new PointF();
             PointF point2 = new PointF();
             PointF point3 = new PointF();
@@ -1208,6 +1277,17 @@ namespace YimaWF
         }
 
         #region 海图操作接口
+        public void SetDisplayCategory(DISPLAY_CATEGORY_NUM displayType)
+        {
+            axYimaEnc.SetDisplayCategory((short)displayType);
+        }
+
+        public void SetPlatform(int x, int y)
+        {
+            GeoPoint p = new GeoPoint(x, y);
+            platformGeoPo = p;
+        }
+
         public void CenterMap(int x, int y)
         {
             axYimaEnc.CenterMap(x, y);
@@ -1320,7 +1400,7 @@ namespace YimaWF
         {
             List<string> list = new List<string>();
             int libMapCount = axYimaEnc.GetLibMapCount();
-            Console.WriteLine(libMapCount);
+            //Console.WriteLine(libMapCount);
             string mapName = "                    ";
             string mapType = null;
             float tmp1 = 0;
@@ -1385,7 +1465,62 @@ namespace YimaWF
             axYimaEnc.OverViewLibMap(libMapPos);
         }
 
+        //告警接口
+        public void AddAlarm(int x, int y)
+        {
+
+        }
+
+        //雷达角度设置
+        public void SetRadarAngle(int angle, int ID)
+        {
+            Radar radar = GetRadar(ID);
+            if (radar != null)
+                radar.CurAngle = angle;
+            //startAngle = angle;
+        }
+
+        public void SetRadarRadius(int radius, int ID)
+        {
+            //geoRadius = radius;
+            Radar radar = GetRadar(ID);
+            if (radar != null)
+                radar.GeoRadius = radius;
+        }
+        //光电角度设置
+        public void SetOptAngle(int angle)
+        {
+
+        }
+        //光电扫描半径设置，单位毫米
+        public void SetOptRadius(int radius)
+        {
+            optGeoRadius = radius;
+        }
+        //光电扫描宽度设定
+        public void SetOptScanAngle(int angle)
+        {
+            optScanAngle = angle;
+        }
+
         #endregion
+        //通过ID获取radar结构体
+        private Radar GetRadar(int ID)
+        {
+            Radar radar = null;
+            switch(ID)
+            {
+                case 1:
+                    radar = radar1;
+                    break;
+                case 2:
+                    radar = radar2;
+                    break;
+                default:
+                    break;
+            }
+            return radar;
+        }
 
 
         private string GetDegreeStringFromGeoCoor(bool bLongOrLatiCoor,
@@ -1401,7 +1536,7 @@ namespace YimaWF
             {
                 if (fArcByDegree >= 0)
                 {
-                    Console.WriteLine(fArcByDegree);
+                    //Console.WriteLine(fArcByDegree);
                     retDegreeString = string.Format("{0:D3}度{1:000000.000}分E", (int)fArcByDegree,
                         60 * (fArcByDegree % 1));
                 }
@@ -1429,6 +1564,7 @@ namespace YimaWF
 
             return retDegreeString;
         }
+
 
     }
 }

@@ -34,7 +34,7 @@
       <HintPath>..\..\WPFTest\WPFTest\bin\Debug\AxInterop.YIMAENCLib.dll</HintPath>
     </Reference>
     <Reference Include="Interop.YIMAENCLib">
-      <HintPath>..\..\WPFTest\WPFTest\bin\Debug\Interop.YIMAENCLib.dll</HintPath>
+      <HintPath>..\..\YimaTest\YimaTest\bin\Debug\Interop.YIMAENCLib.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="System" />
@@ -49,11 +49,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="data\Alarm.cs" />
     <Compile Include="data\Config.cs" />
     <Compile Include="data\ForbiddenZone.cs" />
     <Compile Include="data\MapInfo.cs" />
     <Compile Include="data\PipeLine.cs" />
     <Compile Include="data\ProtectZone.cs" />
+    <Compile Include="data\Radar.cs" />
     <Compile Include="data\Target.cs" />
     <Compile Include="data\TrackPoint.cs" />
     <Compile Include="Enum.cs" />
@@ -95,6 +97,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\矢量.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Target.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
