@@ -51,10 +51,15 @@
             this.ShowRadarMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.光电观察范围ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ShowAllTrackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.addFZContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.CancelAdd = new System.Windows.Forms.ToolStripMenuItem();
+            this.CancelPoint = new System.Windows.Forms.ToolStripMenuItem();
+            this.EndAdd = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.axYimaEnc)).BeginInit();
             this.statusStrip1.SuspendLayout();
             this.targetContextMenu.SuspendLayout();
             this.normalContextMenu.SuspendLayout();
+            this.addFZContextMenu.SuspendLayout();
             this.SuspendLayout();
             // 
             // axYimaEnc
@@ -232,6 +237,36 @@
             this.ShowAllTrackToolStripMenuItem.Text = "航迹显示";
             this.ShowAllTrackToolStripMenuItem.Click += new System.EventHandler(this.ShowAllTrackToolStripMenuItem_Click);
             // 
+            // addFZContextMenu
+            // 
+            this.addFZContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.CancelAdd,
+            this.CancelPoint,
+            this.EndAdd});
+            this.addFZContextMenu.Name = "addFZContextMenu";
+            this.addFZContextMenu.Size = new System.Drawing.Size(153, 92);
+            // 
+            // CancelAdd
+            // 
+            this.CancelAdd.Name = "CancelAdd";
+            this.CancelAdd.Size = new System.Drawing.Size(152, 22);
+            this.CancelAdd.Text = "取消添加";
+            this.CancelAdd.Click += new System.EventHandler(this.CancelAdd_Click);
+            // 
+            // CancelPoint
+            // 
+            this.CancelPoint.Name = "CancelPoint";
+            this.CancelPoint.Size = new System.Drawing.Size(152, 22);
+            this.CancelPoint.Text = "撤销";
+            this.CancelPoint.Click += new System.EventHandler(this.CancelPoint_Click);
+            // 
+            // EndAdd
+            // 
+            this.EndAdd.Name = "EndAdd";
+            this.EndAdd.Size = new System.Drawing.Size(152, 22);
+            this.EndAdd.Text = "完成绘制";
+            this.EndAdd.Click += new System.EventHandler(this.EndAdd_Click);
+            // 
             // YimaEncCtrl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -245,6 +280,7 @@
             this.statusStrip1.PerformLayout();
             this.targetContextMenu.ResumeLayout(false);
             this.normalContextMenu.ResumeLayout(false);
+            this.addFZContextMenu.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -273,5 +309,9 @@
         private System.Windows.Forms.ToolStripMenuItem OptLinkageToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ShowTrackMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ShowAllTrackToolStripMenuItem;
+        private System.Windows.Forms.ContextMenuStrip addFZContextMenu;
+        private System.Windows.Forms.ToolStripMenuItem CancelAdd;
+        private System.Windows.Forms.ToolStripMenuItem CancelPoint;
+        private System.Windows.Forms.ToolStripMenuItem EndAdd;
     }
 }
