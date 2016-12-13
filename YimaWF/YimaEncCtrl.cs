@@ -1463,6 +1463,16 @@ namespace YimaWF
             }
             return null;
         }
+
+        public void PreviewForbiddenZone(string name)
+        {
+            ForbiddenZone fz = FindForbiddenZoneByName(name);
+            if (fz != null && fz.PointList.Count > 0)
+            {
+                var p = fz.PointList[0];
+                axYimaEnc.CenterMap(p.x, p.y);
+            }
+        }
         #endregion
         public void StartAddPipeLine()
         {
