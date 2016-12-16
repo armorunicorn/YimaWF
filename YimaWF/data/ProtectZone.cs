@@ -20,5 +20,7 @@ namespace YimaWF.data
             Radius = r;
             ContentColor = Color.FromArgb(50, c);
         }
+
+        public string Name;
     }
 }

@@ -10,5 +10,9 @@ namespace YimaWF.data
     public class ForbiddenZone
     {
         public List<GeoPoint> PointList = new List<GeoPoint>();
+
+        public int ID;
+
+        public string Name;
     }
 }

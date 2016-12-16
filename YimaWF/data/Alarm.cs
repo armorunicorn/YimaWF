@@ -7,10 +7,10 @@ using YimaEncCtrl;
 
 namespace YimaWF.data
 {
-    public class PipeLine
+    public class Alarm
     {
-        public List<GeoPoint> PointList = new List<GeoPoint>();
+        public GeoPoint Location;
 
-        public string Name;
+        public Target RelativeTarget;
     }
 }
