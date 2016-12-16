@@ -63,6 +63,16 @@ namespace YimaWF.Properties {
         /// <summary>
         ///   查找 System.Drawing.Bitmap 类型的本地化资源。
         /// </summary>
+        public static System.Drawing.Bitmap LargeTargetImg {
+            get {
+                object obj = ResourceManager.GetObject("LargeTargetImg", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找 System.Drawing.Bitmap 类型的本地化资源。
+        /// </summary>
         public static System.Drawing.Bitmap PlantformImg {
             get {
                 object obj = ResourceManager.GetObject("PlantformImg", resourceCulture);
