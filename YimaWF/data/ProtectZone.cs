@@ -21,6 +21,7 @@ namespace YimaWF.data
             ContentColor = Color.FromArgb(50, c);
         }
 
+        public int ID;
         public string Name;
     }
 }
