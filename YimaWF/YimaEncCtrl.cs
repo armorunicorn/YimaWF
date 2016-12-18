@@ -22,6 +22,7 @@ namespace YimaWF
     public delegate void ShowTargetDetailDelegate(Target t);
     public delegate void TargetOptLinkageDelegate(Target t);
     public delegate void AddedForbiddenZoneDelegate(ForbiddenZone f);
+    public delegate void ShowRangingResultDelegate(int len);
 
     public partial class YimaEncCtrl: UserControl
     {
@@ -65,11 +66,16 @@ namespace YimaWF
         //目标图片切换的比例尺
         private int targetChangeScale = 2107260;
 
+        //测距使用的内部全局变量
+        private GeoPoint startingRangingPoint;
+        private GeoPoint terminalRangingPoint;
+
         #region 回调
         public event TargetSelectDelegate TargetSelect;
         public event ShowTargetDetailDelegate ShowTargetDetail;
         public event TargetOptLinkageDelegate TargetOptLinkage;
         public event AddedForbiddenZoneDelegate AddedForbiddenZone;
+        public event ShowRangingResultDelegate ShowRangingResult;
         #endregion
 
         CURRENT_SUB_OPERATION m_curOperation = CURRENT_SUB_OPERATION.NO_OPERATION;
@@ -257,6 +263,11 @@ namespace YimaWF
                     if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
                     {
                         DrawPipeLine(g, curPipeLine);
+                        break;
+                    }
+                    if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
+                    {
+                        DrawRangingPoint(g, startingRangingPoint, terminalRangingPoint);
                         break;
                     }
                     //航迹跟踪模式，只显示一条船的航迹
@@ -618,6 +629,25 @@ namespace YimaWF
 
         }
 
+        private void DrawRangingPoint(Graphics g, GeoPoint startingPoint, GeoPoint terminalPoint)
+        {
+            var pen = new Pen(Color.Red);
+            var brush = new SolidBrush(pen.Color);
+            int startingX = 0, startingY = 0;
+            int terminalX = 0, terminalY = 0;
+            if (startingPoint == null)
+                return;
+            axYimaEnc.GetScrnPoFromGeoPo(startingPoint.x, startingPoint.y, ref startingX, ref startingY);
+            Rectangle rect = new Rectangle(startingX - 6, startingY - 6, 12, 12);
+            g.FillEllipse(brush, rect);
+            if (terminalPoint == null)
+                return;
+            axYimaEnc.GetScrnPoFromGeoPo(terminalPoint.x, terminalPoint.y, ref terminalX, ref terminalY);
+            rect = new Rectangle(terminalX - 6, terminalY - 6, 12, 12);
+            g.FillEllipse(brush, rect);
+            g.DrawLine(pen, startingX, startingY, terminalX, terminalY);
+        }
+
         private void Rotate(float heading, ref Point A, ref Point B, ref Point C, ref Point D, Point O)
         {
             double angle = (double)(heading  * Math.PI / 180);
@@ -724,6 +754,28 @@ namespace YimaWF
                     axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
                     curPipeLine.PointList.Add(new GeoPoint(geoPoX, geoPoY));
                     Invalidate();
+                }
+                else if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
+                {
+                    axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
+                    if (startingRangingPoint == null)
+                    {
+                        startingRangingPoint = new GeoPoint(geoPoX, geoPoY);
+                        Invalidate();
+                    }
+                    else if (terminalRangingPoint == null)
+                    {
+                        terminalRangingPoint = new GeoPoint(geoPoX, geoPoY);
+                        Invalidate();
+                        int startingX = 0, startingY = 0;
+                        int terminalX = 0, terminalY = 0;
+                        axYimaEnc.GetScrnPoFromGeoPo(startingRangingPoint.x, startingRangingPoint.y, ref startingX, ref startingY);
+                        axYimaEnc.GetScrnPoFromGeoPo(terminalRangingPoint.x, terminalRangingPoint.y, ref terminalX, ref terminalY);
+                        int x = Math.Abs(terminalX - startingX);
+                        int y = Math.Abs(terminalY - startingY);
+                        int scanLen = Convert.ToInt32(Math.Sqrt(x * x + y * y));
+                        float geoLen = axYimaEnc.GetGeoLenFromScrnLen(scanLen);
+                    }
                 }
             }
         }
@@ -1474,6 +1526,8 @@ namespace YimaWF
             }
         }
         #endregion
+
+        #region 管道操作
         public void StartAddPipeLine()
         {
             if (IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION))
@@ -1498,6 +1552,19 @@ namespace YimaWF
 
             return pipe;
         }
+        #endregion
+
+        #region 测距操作
+        public void StartRanging()
+        {
+            if (IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
+            {
+                SetOperation(CURRENT_SUB_OPERATION.RANGING);
+                Invalidate();
+            }
+        }
+
+        #endregion
         #region 图库管理接口
         public List<string> GetMapList()
         {

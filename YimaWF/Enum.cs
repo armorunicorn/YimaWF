@@ -5,7 +5,7 @@
         NO_OPERATION = 0,
         ADD_FORBIDDEN_ZONE = 1,
         ADD_PIPELINE = 0x2,
-        ADD_FACE = 0x4,
+        RANGING = 0x4,
         AREA_ZOOM_IN = 0x10,
         ADD_WAYPOINT = 0x20,
         ADD_ROUTE = 0x40,
