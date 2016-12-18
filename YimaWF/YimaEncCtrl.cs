@@ -26,6 +26,7 @@ namespace YimaWF
     public partial class YimaEncCtrl: UserControl
     {
         private static int MaxForbiddenZoneNum = 5;
+        private static int MaxProtectZoneNum = 5;
 
         public AxYimaEnc YimaEnc;
 
@@ -40,6 +41,7 @@ namespace YimaWF
         public Dictionary<int, Target> MergeTargetDic = new Dictionary<int, Target>();
 
         public List<ProtectZone> ProtectZoneList = new List<ProtectZone>();
+        private Dictionary<int, ProtectZone> ProtectZoneMap = new Dictionary<int, ProtectZone>();
 
         public List<ForbiddenZone> ForbiddenZoneList = new List<ForbiddenZone>();
         //key为ID,用来确保ID只能为0到4
@@ -1355,18 +1357,57 @@ namespace YimaWF
             Invalidate();
         }
 
-        #region 多边形保护区操作
-        public void AddProtectZone(ProtectZone pz)
+        #region 圆形保护区操作
+        public bool AddProtectZone(ProtectZone pz)
         {
-            ProtectZoneList.Add(pz);
+            if (ProtectZoneMap.Count >= MaxProtectZoneNum)
+            {
+                return false;
+            }
+            else
+            {
+                for (int i = 0; i < MaxProtectZoneNum; i++)
+                {
+                    ProtectZone tmp;
+                    if (!ProtectZoneMap.TryGetValue(i, out tmp))
+                    {
+                        pz.ID = i;
+                        ProtectZoneMap.Add(i, pz);
+                        ProtectZoneList.Add(pz);
+                        break;
+                    }
+                }
+                return true;
+            }
         }
 
         public void DeleteProtectZoneByName(string name)
         {
+            int i = 0;
             foreach (ProtectZone pz in ProtectZoneList)
             {
                 if (pz.Name == name)
-                    ProtectZoneList.Remove(pz);
+                {
+                    ProtectZoneMap.Remove(pz.ID);
+                    ProtectZoneList.RemoveAt(i);
+                    break;
+                }
+                i++;
+            }
+        }
+
+        public void DeleteProtectZoneByID(int ID)
+        {
+            int i = 0;
+            foreach (ProtectZone pz in ProtectZoneList)
+            {
+                if (pz.ID == ID)
+                {
+                    ProtectZoneMap.Remove(pz.ID);
+                    ProtectZoneList.RemoveAt(i);
+                    break;
+                }
+                i++;
             }
         }
 
