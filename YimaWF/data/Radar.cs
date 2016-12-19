@@ -16,5 +16,7 @@ namespace YimaWF.data
         public float Radius;
         //雷达的物理半径（毫米）
         public int GeoRadius;
+
+        public Dictionary<int, Target> TargetMap = new Dictionary<int, Target>();
     }
 }

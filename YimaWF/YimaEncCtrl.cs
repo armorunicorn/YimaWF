@@ -28,6 +28,7 @@ namespace YimaWF
     {
         private static int MaxForbiddenZoneNum = 5;
         private static int MaxProtectZoneNum = 5;
+        private static short MaxShowTargetTime = 30;
 
         public AxYimaEnc YimaEnc;
 
@@ -38,8 +39,10 @@ namespace YimaWF
         private int statusStripHeight = 22;
 
         public Dictionary<int, Target> AISTargetDic = new Dictionary<int, Target>();
-        public Dictionary<int, Target> RadarTargetDic = new Dictionary<int, Target>();
+        //public Dictionary<int, Target> RadarTargetDic = new Dictionary<int, Target>();
         public Dictionary<int, Target> MergeTargetDic = new Dictionary<int, Target>();
+
+        public List<Target> RadarTargetList = new List<Target>();
 
         public List<ProtectZone> ProtectZoneList = new List<ProtectZone>();
         private Dictionary<int, ProtectZone> ProtectZoneMap = new Dictionary<int, ProtectZone>();
@@ -300,7 +303,8 @@ namespace YimaWF
                             DrawTarget(g, t);
                         }
                     if (showRadarTarget)
-                        foreach (var t in RadarTargetDic.Values)
+                    {
+                        foreach (var t in RadarTargetList)
                         {
                             if (t.IsCheck == true)
                             {
@@ -309,6 +313,7 @@ namespace YimaWF
                             }
                             DrawTarget(g, t);
                         }
+                    }
 
                     if (showMergeTarget)
                         foreach (var t in MergeTargetDic.Values)
@@ -395,7 +400,7 @@ namespace YimaWF
                     D.X = A.X;
                     D.Y = A.Y - Convert.ToInt32(t.Speed * 5);
                     //根据船的航向旋转三角形
-                    Rotate(t.Heading, ref A, ref B, ref C, ref D, new Point(curX, curY));
+                    Rotate(t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
                     Point[] points = { A, B, C };
                     //画出船的图标
                     g.FillPolygon(brush, points);
@@ -413,7 +418,7 @@ namespace YimaWF
                     D.X = curX - TargetRectFactor;
                     D.Y = curY + TargetRectFactor;
                     //根据船的航向旋转图形
-                    Rotate(t.Heading, ref A, ref B, ref C, ref D, new Point(curX, curY));
+                    Rotate(t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
                     Point[] points = { A, B, C, D };
                     //画出船的图标
                     g.FillPolygon(brush, points);
@@ -445,7 +450,7 @@ namespace YimaWF
                 if (t.ShowSignTime == 0)
                 {
                     //显示简略信息
-                    statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts\n{3}", t.Name, 360 - t.Heading, t.Speed, t.ArriveTime);
+                    statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts\n{3}", t.Name, 360 - t.Course, t.Speed, t.ArriveTime);
                     if (t.IsCheck)
                     {
 
@@ -475,7 +480,7 @@ namespace YimaWF
                         t.Source.ToString(), t.Name, t.Nationality, t.CallSign,
                         t.MIMSI,
                         t.IMO,
-                        360 - t.Heading, t.Speed);
+                        360 - t.Course, t.Speed);
                     statusBrush = new SolidBrush(Color.FromArgb(255, Color.BurlyWood));
                     g.FillRectangle(statusBrush, statusRect);
                     g.DrawString(statusStr, AppConfig.TargetStatusFont, Brushes.Black, statusRect);
@@ -492,7 +497,7 @@ namespace YimaWF
                     D.X = curX - factor;
                     D.Y = curY + factor;
                     //根据船的航向旋转图形
-                    Rotate(t.Heading, ref A, ref B, ref C, ref D, new Point(curX, curY));
+                    Rotate(t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
                     //画出船的图标
                     g.DrawPolygon(AppConfig.TargetSelectPen, new Point[] { A, B, C, D });
                 }
@@ -869,7 +874,7 @@ namespace YimaWF
                     //替换当前选中的目标
                     CurSelectedTarget = t;
                     t.IsCheck = true;
-                    t.ShowSignTime = 3;
+                    t.ShowSignTime = MaxShowTargetTime;
                     isInvalidate = true;
                 }
                 if (IsOnOperation(CURRENT_SUB_OPERATION.HAND_ROAM))
@@ -935,13 +940,13 @@ namespace YimaWF
         private Target GetClickTarget(Point p)
         {
             int x = 0, y = 0;
-            List<Dictionary<int, Target>.ValueCollection> values = new List<Dictionary<int, Target>.ValueCollection>(3);
+            List<List<Target>> values = new List<List<Target>>(3);
             if (showAISTarget)
-                values.Add(AISTargetDic.Values);
+                values.Add(AISTargetDic.Values.ToList());
             if (showRadarTarget)
-                values.Add(RadarTargetDic.Values);
+                values.Add(RadarTargetList);
             if (showMergeTarget)
-                values.Add(MergeTargetDic.Values);
+                values.Add(MergeTargetDic.Values.ToList());
             foreach (var d in values)
                 foreach(var t in d)
                 {
@@ -1290,7 +1295,7 @@ namespace YimaWF
                 D.X = A.X;
                 D.Y = A.Y - Convert.ToInt32(t.Speed * 5);
                 //根据船的航向旋转三角形
-                Rotate(p.Heading, ref A, ref B, ref C, ref D, new Point(curX, curY));
+                Rotate(p.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
                 Point[] points = { A, B, C };
                 //画出船的图标
                 g.FillPolygon(brush, points);
@@ -1401,9 +1406,9 @@ namespace YimaWF
         public void SetShowTrackOrNot(bool show)
         {
             showTrack = show;
-            var dicList = new Dictionary<int, Target>[] { AISTargetDic, MergeTargetDic, RadarTargetDic };
-            foreach(var dic in dicList)
-                foreach(var t in dic.Values)
+            var dicList = new List<Target>[] { AISTargetDic.Values.ToList(), MergeTargetDic.Values.ToList(), RadarTargetList };
+            foreach(var list in dicList)
+                foreach(var t in list)
                 {
                     t.ShowTrack = showTrack;
                 }
@@ -1763,6 +1768,94 @@ namespace YimaWF
         public void SetOptScanAngle(int angle)
         {
             optScanAngle = angle;
+        }
+        #endregion
+
+        #region 雷达目标操作
+        public bool AddRadarTarget(int radarID, int targetNO, DateTime foundTime, int destination, float speed, float course, 
+            double longitude, double latitude)
+        {
+            Radar radar = GetRadar(radarID);
+            if (radar == null)
+                //雷达ID错误
+                return false;
+            Target tmp;
+            if(radar.TargetMap.TryGetValue(targetNO, out tmp))
+            {
+                //目标已存在
+                return false;
+            }
+            tmp = new Target(radarID, targetNO, course, speed);
+            tmp.UpdateTime = foundTime.ToString();
+            tmp.Destination = destination;
+            int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
+            GeoPoint gp = new GeoPoint(Convert.ToInt32(longitude * iGeoCoorMultiFactor), Convert.ToInt32(latitude * iGeoCoorMultiFactor));
+            TrackPoint tp = new TrackPoint(gp);
+            tp.Course = course;
+            tp.Time = foundTime.ToString();
+            tmp.Track.Add(tp);
+            radar.TargetMap.Add(tmp.ID, tmp);
+            RadarTargetList.Add(tmp);
+            return true;
+        }
+
+        public void UpdateRadarTarget(int radarID, int targetNO, DateTime foundTime, int destination, float speed, float course,
+            double longitude, double latitude)
+        {
+            Target tmp = GetRadarTarget(radarID, targetNO);
+            if (tmp == null)
+                return;
+            tmp.Course = course;
+            tmp.Speed = speed;
+            tmp.UpdateTime = foundTime.ToString();
+            tmp.Destination = destination;
+            int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
+            GeoPoint gp = new GeoPoint(Convert.ToInt32(longitude * iGeoCoorMultiFactor), Convert.ToInt32(latitude * iGeoCoorMultiFactor));
+            TrackPoint tp = new TrackPoint(gp);
+            tp.Course = course;
+            tp.Time = foundTime.ToString();
+            tmp.Track.Add(tp);
+        }
+
+        public void DeleteRadarTarget(int radarID, int targetNO)
+        {
+            Radar radar = GetRadar(radarID);
+            if (radar == null)
+                //雷达ID错误
+                return;
+            Target tmp;
+            if (!radar.TargetMap.TryGetValue(targetNO, out tmp))
+            {
+                //目标不存在
+                return;
+            }
+            //删除map和list中的类
+            radar.TargetMap.Remove(tmp.ID);
+            int count = 0;
+            foreach(var t in RadarTargetList)
+            {
+                if (t.ID == targetNO && t.RadarID == radarID)
+                {
+                    RadarTargetList.RemoveAt(count);
+                    break;
+                }
+                count++;
+            }
+        }
+
+        public Target GetRadarTarget(int radarID, int targetNO)
+        {
+            Target tmp = null;
+            Radar radar = GetRadar(radarID);
+            if (radar == null)
+                //雷达ID错误
+                return null;
+            if (!radar.TargetMap.TryGetValue(targetNO, out tmp))
+            {
+                //目标不存在
+                return null;
+            }
+            return tmp;
         }
         #endregion
 
