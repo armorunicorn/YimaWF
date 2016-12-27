@@ -30,26 +30,30 @@ namespace YimaWF.data
         public TargetType Type = TargetType.Unknow;
         public List<TrackPoint> Track = new List<TrackPoint>();
         public float Speed = 0;
-        public float Heading = 0;
+        public float Course = 0;
         public int ID = 0;
         public bool IsCheck = false;
         public string IMO;
         public string MIMSI;
         public string CallSign;
+        //国籍
         public string Nationality;
-        public string Destination;
-        public string Date;
-        public string Time;
-        public string Name;
+        //距离
+        public int Destination;
+        //public string Date;
+        public string UpdateTime;
+        public string Name = "未知";
         public string ArriveTime;
         public short ShowSignTime = 0;
         public bool IsApproach = false;
         public bool ShowTrack = true;
+        public int RadarID = 0;
 
-        public Target(int id, float heading, float speed)
+        public Target(int radarID, int id, float course, float speed)
         {
+            RadarID = radarID;
             ID = id;
-            Heading = heading;
+            Course = course;
             Speed = speed;
         }
     }
