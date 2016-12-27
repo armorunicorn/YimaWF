@@ -22,6 +22,7 @@ namespace YimaWF
     public delegate void ShowTargetDetailDelegate(Target t);
     public delegate void TargetOptLinkageDelegate(Target t);
     public delegate void AddedForbiddenZoneDelegate(ForbiddenZone f);
+    public delegate void AddedPipeLineDelegate(PipeLine p);
     public delegate void ShowRangingResultDelegate(int len);
 
     public partial class YimaEncCtrl: UserControl
@@ -80,6 +81,7 @@ namespace YimaWF
         public event ShowTargetDetailDelegate ShowTargetDetail;
         public event TargetOptLinkageDelegate TargetOptLinkage;
         public event AddedForbiddenZoneDelegate AddedForbiddenZone;
+        public event AddedPipeLineDelegate AddedPipeLine;
         public event ShowRangingResultDelegate ShowRangingResult;
         #endregion
 
@@ -1230,10 +1232,12 @@ namespace YimaWF
         private void CancelAdd_Click(object sender, EventArgs e)
         {
             CancelAddForbiddenZone();
+            CancelAddPipeLine();
         }
         private void CancelPoint_Click(object sender, EventArgs e)
         {
             ClearLastForbiddenZonePoint();
+            ClearLastPipeLinePoint();
         }
 
         private void EndAdd_Click(object sender, EventArgs e)
@@ -1246,6 +1250,15 @@ namespace YimaWF
             else
             {
                 CancelAddForbiddenZone();
+            }
+            if (AddedPipeLine != null)
+            {
+                PipeLine pipe = EndAddPipeLine();
+                AddedPipeLine(pipe);
+            }
+            else
+            {
+                CancelAddPipeLine();
             }
         }
         #endregion
@@ -1633,6 +1646,28 @@ namespace YimaWF
             }
 
             return pipe;
+        }
+
+        public void ClearLastPipeLinePoint()
+        {
+            if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
+            {
+                if (curPipeLine.PointList.Count > 0)
+                {
+                    curPipeLine.PointList.RemoveAt(curPipeLine.PointList.Count - 1);
+                    Invalidate();
+                }
+            }
+        }
+
+        public void CancelAddPipeLine()
+        {
+            if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
+            {
+                curPipeLine = null;
+                ClearOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE);
+                Invalidate();
+            }
         }
         #endregion
 
