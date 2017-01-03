@@ -22,12 +22,14 @@ namespace YimaWF
     public delegate void ShowTargetDetailDelegate(Target t);
     public delegate void TargetOptLinkageDelegate(Target t);
     public delegate void AddedForbiddenZoneDelegate(ForbiddenZone f);
+    public delegate void AddedPipeLineDelegate(PipeLine pl);
     public delegate void ShowRangingResultDelegate(int len);
 
     public partial class YimaEncCtrl: UserControl
     {
         private static int MaxForbiddenZoneNum = 5;
         private static int MaxProtectZoneNum = 5;
+        private static int MaxPipeLineZoneNum = 5;
         private static short MaxShowTargetTime = 30;
 
         public AxYimaEnc YimaEnc;
@@ -49,9 +51,11 @@ namespace YimaWF
 
         public List<ForbiddenZone> ForbiddenZoneList = new List<ForbiddenZone>();
         //key为ID,用来确保ID只能为0到4
-        private Dictionary<int, ForbiddenZone> ForbiddenZoneMap = new Dictionary<int, ForbiddenZone>();
+        private Dictionary<int, ForbiddenZone> ForbiddenZoneMap = new Dictionary<int, ForbiddenZone>(5);
 
-        public List<PipeLine> PipLineList = new List<PipeLine>();
+        public List<PipeLine> PipeLineList = new List<PipeLine>();
+        //key为ID,用来确保ID只能为0到4
+        private Dictionary<int, PipeLine> PipeLineMap = new Dictionary<int, PipeLine>(5);
 
         public Config AppConfig;
 
@@ -80,6 +84,7 @@ namespace YimaWF
         public event ShowTargetDetailDelegate ShowTargetDetail;
         public event TargetOptLinkageDelegate TargetOptLinkage;
         public event AddedForbiddenZoneDelegate AddedForbiddenZone;
+        public event AddedPipeLineDelegate AddedPipeLine;
         public event ShowRangingResultDelegate ShowRangingResult;
         #endregion
 
@@ -254,7 +259,7 @@ namespace YimaWF
                     foreach (var fz in ForbiddenZoneList)
                         DrawForbiddenZone(g, fz, true);
 
-                    foreach (var p in PipLineList)
+                    foreach (var p in PipeLineList)
                         DrawPipeLine(g, p);
 
                     //多边形保护区绘制模式
@@ -898,9 +903,9 @@ namespace YimaWF
             //鼠标右键
             else if(e.Button == MouseButtons.Right)
             {
-                if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
+                if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE) || IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
                 {
-                    addFZContextMenu.Show(axYimaEnc, e.Location);
+                    addContextMenu.Show(axYimaEnc, e.Location);
                 }
                 else
                 {
@@ -1229,23 +1234,44 @@ namespace YimaWF
         #region 多边形区域绘制右键菜单
         private void CancelAdd_Click(object sender, EventArgs e)
         {
-            CancelAddForbiddenZone();
+            if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
+                CancelAddForbiddenZone();
+            else if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
+                CancelAddPipeLine();
         }
         private void CancelPoint_Click(object sender, EventArgs e)
         {
-            ClearLastForbiddenZonePoint();
+            if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
+                ClearLastForbiddenZonePoint();
+            else if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
+                ClearLastPipeLinePoint();
         }
 
         private void EndAdd_Click(object sender, EventArgs e)
         {
-            if (AddedForbiddenZone != null)
+            if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
             {
-                ForbiddenZone fz = EndAddForbiddenZone();
-                AddedForbiddenZone(fz);
+                if (AddedForbiddenZone != null)
+                {
+                    ForbiddenZone fz = EndAddForbiddenZone();
+                    AddedForbiddenZone(fz);
+                }
+                else
+                {
+                    CancelAddForbiddenZone();
+                }
             }
-            else
+            else if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
             {
-                CancelAddForbiddenZone();
+                if (AddedPipeLine != null)
+                {
+                    PipeLine pl = EndAddPipeLine();
+                    AddedPipeLine(pl);
+                }
+                else
+                {
+                    CancelAddPipeLine();
+                }
             }
         }
         #endregion
@@ -1439,6 +1465,15 @@ namespace YimaWF
             }
         }
 
+        public bool AddProtectZone(GeoPoint center, float radius, Color color, string name)
+        {
+            if (center == null)
+                center = new GeoPoint(platformGeoPo);
+            ProtectZone pz = new ProtectZone(center, radius, color);
+            pz.Name = name;
+            return AddProtectZone(pz);
+        }
+
         public void DeleteProtectZoneByName(string name)
         {
             int i = 0;
@@ -1478,25 +1513,20 @@ namespace YimaWF
             }
             return null;
         }
-
-        public void RewriteProtectZoneByName(string name, GeoPoint newcenter, float newradius, Color newcontentcolor)
-        {
-            ProtectZone pz = FindProtectZoneByName(name);
-            pz.Center = newcenter;
-            pz.Radius = newradius;
-            pz.ContentColor = newcontentcolor;
-        }
         #endregion
 
         #region 多边形区域操作
-        public void StartAddForbiddenZone()
+        public bool StartAddForbiddenZone()
         {
-            if(IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) && ForbiddenZoneList.Count < YimaEncCtrl.MaxForbiddenZoneNum)
+            if (IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) && ForbiddenZoneList.Count < YimaEncCtrl.MaxForbiddenZoneNum)
             {
                 SetOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE);
                 curForbiddenZone = new ForbiddenZone();
                 Invalidate();
+                return true;
             }
+            else
+                return false;
         }
 
         public void ClearLastForbiddenZonePoint()
@@ -1610,29 +1640,126 @@ namespace YimaWF
         #endregion
 
         #region 管道操作
-        public void StartAddPipeLine()
+        public bool StartAddPipeLine()
         {
-            if (IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION))
+            if (IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) && PipeLineList.Count < YimaEncCtrl.MaxPipeLineZoneNum)
             {
                 SetOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE);
                 curPipeLine = new PipeLine();
+                Invalidate();
+                return true;
+            }
+            else
+                return false;
+        }
+
+        public void ClearLastPipeLinePoint()
+        {
+            if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
+            {
+                if (curPipeLine.PointList.Count > 0)
+                {
+                    curPipeLine.PointList.RemoveAt(curPipeLine.PointList.Count - 1);
+                    Invalidate();
+                }
+            }
+        }
+
+        public void CancelAddPipeLine()
+        {
+            if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
+            {
+                curPipeLine = null;
+                ClearOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE);
                 Invalidate();
             }
         }
 
         public PipeLine EndAddPipeLine()
         {
-            PipeLine pipe = null;
+            PipeLine tmp = null;
             if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
             {
-                PipLineList.Add(curPipeLine);
-                pipe = curPipeLine;
+                AddPipeLine(curPipeLine);
+                tmp = curPipeLine;
                 curPipeLine = null;
                 ClearOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE);
                 Invalidate();
             }
+            return tmp;
+        }
 
-            return pipe;
+        public bool AddPipeLine(PipeLine pl)
+        {
+            if (PipeLineList.Count >= MaxPipeLineZoneNum)
+            {
+                return false;
+            }
+            else
+            {
+                for (int i = 0; i < MaxPipeLineZoneNum; i++)
+                {
+                    PipeLine tmp;
+                    if (!PipeLineMap.TryGetValue(i, out tmp))
+                    {
+                        pl.ID = i;
+                        PipeLineMap.Add(i, pl);
+                        PipeLineList.Add(pl);
+                        break;
+                    }
+                }
+                return true;
+            }
+        }
+
+        public void DeletePipeLineByName(string name)
+        {
+            int i = 0;
+            foreach (PipeLine pl in PipeLineList)
+            {
+                if (pl.Name == name)
+                {
+                    PipeLineMap.Remove(pl.ID);
+                    PipeLineList.RemoveAt(i);
+                    break;
+                }
+                i++;
+            }
+        }
+
+        public void DeletePipeLineByID(int id)
+        {
+            int i = 0;
+            foreach (PipeLine pl in PipeLineList)
+            {
+                if (pl.ID == id)
+                {
+                    PipeLineMap.Remove(pl.ID);
+                    PipeLineList.RemoveAt(i);
+                    break;
+                }
+                i++;
+            }
+        }
+
+        public PipeLine FindPipeLineByName(string name)
+        {
+            foreach (PipeLine pl in PipeLineList)
+            {
+                if (pl.Name == name)
+                    return pl;
+            }
+            return null;
+        }
+
+        public void PreviewPipeLine(string name)
+        {
+            PipeLine pl = FindPipeLineByName(name);
+            if (pl != null && pl.PointList.Count > 0)
+            {
+                var p = pl.PointList[0];
+                axYimaEnc.CenterMap(p.x, p.y);
+            }
         }
         #endregion
 

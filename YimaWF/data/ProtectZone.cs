@@ -11,6 +11,9 @@ namespace YimaWF.data
     public class ProtectZone
     {
         public GeoPoint Center;
+        /// <summary>
+        /// 半径，单位米
+        /// </summary>
         public float Radius;
         public Color ContentColor;
 

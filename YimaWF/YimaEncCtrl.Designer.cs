@@ -51,7 +51,7 @@
             this.ShowRadarMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.光电观察范围ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ShowAllTrackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.addFZContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.addContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.CancelAdd = new System.Windows.Forms.ToolStripMenuItem();
             this.CancelPoint = new System.Windows.Forms.ToolStripMenuItem();
             this.EndAdd = new System.Windows.Forms.ToolStripMenuItem();
@@ -59,7 +59,7 @@
             this.statusStrip1.SuspendLayout();
             this.targetContextMenu.SuspendLayout();
             this.normalContextMenu.SuspendLayout();
-            this.addFZContextMenu.SuspendLayout();
+            this.addContextMenu.SuspendLayout();
             this.SuspendLayout();
             // 
             // axYimaEnc
@@ -237,14 +237,14 @@
             this.ShowAllTrackToolStripMenuItem.Text = "航迹显示";
             this.ShowAllTrackToolStripMenuItem.Click += new System.EventHandler(this.ShowAllTrackToolStripMenuItem_Click);
             // 
-            // addFZContextMenu
+            // addContextMenu
             // 
-            this.addFZContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.addContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.CancelAdd,
             this.CancelPoint,
             this.EndAdd});
-            this.addFZContextMenu.Name = "addFZContextMenu";
-            this.addFZContextMenu.Size = new System.Drawing.Size(153, 92);
+            this.addContextMenu.Name = "addFZContextMenu";
+            this.addContextMenu.Size = new System.Drawing.Size(153, 92);
             // 
             // CancelAdd
             // 
@@ -280,7 +280,7 @@
             this.statusStrip1.PerformLayout();
             this.targetContextMenu.ResumeLayout(false);
             this.normalContextMenu.ResumeLayout(false);
-            this.addFZContextMenu.ResumeLayout(false);
+            this.addContextMenu.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -309,7 +309,7 @@
         private System.Windows.Forms.ToolStripMenuItem OptLinkageToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ShowTrackMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ShowAllTrackToolStripMenuItem;
-        private System.Windows.Forms.ContextMenuStrip addFZContextMenu;
+        private System.Windows.Forms.ContextMenuStrip addContextMenu;
         private System.Windows.Forms.ToolStripMenuItem CancelAdd;
         private System.Windows.Forms.ToolStripMenuItem CancelPoint;
         private System.Windows.Forms.ToolStripMenuItem EndAdd;

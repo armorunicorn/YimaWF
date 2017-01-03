@@ -11,6 +11,8 @@ namespace YimaWF.data
     {
         public List<GeoPoint> PointList = new List<GeoPoint>();
 
+        public int ID = 0;
+
         public string Name;
     }
 }
