@@ -22,14 +22,14 @@ namespace YimaWF
     public delegate void ShowTargetDetailDelegate(Target t);
     public delegate void TargetOptLinkageDelegate(Target t);
     public delegate void AddedForbiddenZoneDelegate(ForbiddenZone f);
-    public delegate void AddedPipeLineDelegate(PipeLine pl);
+    public delegate void AddedPipelineDelegate(Pipeline pl);
     public delegate void ShowRangingResultDelegate(int len);
 
     public partial class YimaEncCtrl: UserControl
     {
         private static int MaxForbiddenZoneNum = 5;
         private static int MaxProtectZoneNum = 5;
-        private static int MaxPipeLineZoneNum = 5;
+        private static int MaxPipelineZoneNum = 5;
         private static short MaxShowTargetTime = 30;
 
         public AxYimaEnc YimaEnc;
@@ -53,9 +53,9 @@ namespace YimaWF
         //key为ID,用来确保ID只能为0到4
         private Dictionary<int, ForbiddenZone> ForbiddenZoneMap = new Dictionary<int, ForbiddenZone>(5);
 
-        public List<PipeLine> PipeLineList = new List<PipeLine>();
+        public List<Pipeline> PipelineList = new List<Pipeline>();
         //key为ID,用来确保ID只能为0到4
-        private Dictionary<int, PipeLine> PipeLineMap = new Dictionary<int, PipeLine>(5);
+        private Dictionary<int, Pipeline> PipelineMap = new Dictionary<int, Pipeline>(5);
 
         public Config AppConfig;
 
@@ -71,7 +71,7 @@ namespace YimaWF
         private Image plantformImg;
         private Image largeTargetImg;
         private ForbiddenZone curForbiddenZone;
-        private PipeLine curPipeLine;
+        private Pipeline curPipeline;
         //目标图片切换的比例尺
         private int targetChangeScale = 2107260;
 
@@ -84,15 +84,12 @@ namespace YimaWF
         public event ShowTargetDetailDelegate ShowTargetDetail;
         public event TargetOptLinkageDelegate TargetOptLinkage;
         public event AddedForbiddenZoneDelegate AddedForbiddenZone;
-        public event AddedPipeLineDelegate AddedPipeLine;
+        public event AddedPipelineDelegate AddedPipeline;
         public event ShowRangingResultDelegate ShowRangingResult;
         #endregion
 
         CURRENT_SUB_OPERATION m_curOperation = CURRENT_SUB_OPERATION.NO_OPERATION;
-        GeoPoint lastpoint = null;
-        Point start_point;
-        Point movePoint;
-        int m_iEditingUserMapLayerNum = 0; //当前编辑的图层号
+
         List<GeoPoint> m_editingLineGeoPoints = new List<GeoPoint>();
         bool m_bHasPressedDragStartPo = false;
         Point m_mouseDragFirstPo;
@@ -259,8 +256,8 @@ namespace YimaWF
                     foreach (var fz in ForbiddenZoneList)
                         DrawForbiddenZone(g, fz, true);
 
-                    foreach (var p in PipeLineList)
-                        DrawPipeLine(g, p);
+                    foreach (var p in PipelineList)
+                        DrawPipeline(g, p);
 
                     //多边形保护区绘制模式
                     if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
@@ -272,7 +269,7 @@ namespace YimaWF
                     //管道绘制模式
                     if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
                     {
-                        DrawPipeLine(g, curPipeLine);
+                        DrawPipeline(g, curPipeline);
                         break;
                     }
                     if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
@@ -612,7 +609,7 @@ namespace YimaWF
                 g.DrawLines(pen, list.ToArray());
         }
 
-        private void DrawPipeLine(Graphics g, PipeLine p)
+        private void DrawPipeline(Graphics g, Pipeline p)
         {
             var pen = new Pen(Color.Black);
             if (axYimaEnc.GetCurrentScale() > 1000000)
@@ -764,7 +761,7 @@ namespace YimaWF
                 else if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
                 {
                     axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
-                    curPipeLine.PointList.Add(new GeoPoint(geoPoX, geoPoY));
+                    curPipeline.PointList.Add(new GeoPoint(geoPoX, geoPoY));
                     Invalidate();
                 }
                 else if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
@@ -794,8 +791,6 @@ namespace YimaWF
         }
 
         IntPtr DynamicDC = IntPtr.Zero;
-        Graphics DynamicGraphics = null;
-        Graphics g2 = null;
 
         protected override void OnMouseMove(MouseEventArgs e)
         {
@@ -819,40 +814,6 @@ namespace YimaWF
                         m_mouseDragFirstPo.X, m_mouseDragFirstPo.Y);
                     g.ReleaseHdc(dc);
                     g.Dispose();
-                }
-            }
-
-            else if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_USER_LAYER_OBJ))
-            {
-                if (m_editingLineGeoPoints.Count != 0)
-                {
-                    if (DynamicDC == IntPtr.Zero)
-                    {
-                        g2 = GetGraphics();
-                        DynamicDC = g2.GetHdc();
-
-
-                        var r = axYimaEnc.RefreshDynamicDrawerForScrnDC(DynamicDC.ToInt32(),
-                            axYimaEnc.GetDrawerScreenWidth(), axYimaEnc.GetDrawerScreenHeight());
-                        //DynamicGraphics = Graphics.FromHdc(DynamicDC);
-                        //g2.Dispose();
-                    }
-                    axYimaEnc.SetDrawerPastingByMemScrn(true);
-                    movePoint = e.Location;
-                    int x = 0, y = 0;
-                    axYimaEnc.GetScrnPoFromGeoPo(m_editingLineGeoPoints[0].x, m_editingLineGeoPoints[0].y,
-                        ref x, ref y);
-                    axYimaEnc.DrawMapsInScreen(DynamicDC.ToInt32());
-                    //axYimaEnc1.SetActiveDrawer(false);
-                    var a = GetGraphics();
-                    DynamicGraphics = a;
-                    DynamicGraphics.DrawEllipse(Pens.Red, GetRect(e.Location, new GeoPoint(x + 1, y + 1)));
-                    axYimaEnc.SetDrawerPastingByMemScrn(false);
-                    //axYimaEnc1.SetActiveDrawer(true);
-                    DynamicGraphics.Dispose();
-                    axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref x, ref y);
-                    m_editingLineGeoPoints[1] = new GeoPoint(x, y);
-                    movePoint = e.Location;
                 }
             }
         }
@@ -893,11 +854,6 @@ namespace YimaWF
                     }
                     //SetOperation(CURRENT_SUB_OPERATION.NO_OPERATION);
                     ClearOperation(CURRENT_SUB_OPERATION.HAND_ROAM);
-                }
-                else if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_USER_LAYER_OBJ))
-                {
-                    isInvalidate = true;
-                    SetOperation(CURRENT_SUB_OPERATION.NO_OPERATION);
                 }
             }
             //鼠标右键
@@ -1237,14 +1193,14 @@ namespace YimaWF
             if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
                 CancelAddForbiddenZone();
             else if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
-                CancelAddPipeLine();
+                CancelAddPipeline();
         }
         private void CancelPoint_Click(object sender, EventArgs e)
         {
             if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
                 ClearLastForbiddenZonePoint();
             else if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
-                ClearLastPipeLinePoint();
+                ClearLastPipelinePoint();
         }
 
         private void EndAdd_Click(object sender, EventArgs e)
@@ -1263,14 +1219,14 @@ namespace YimaWF
             }
             else if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
             {
-                if (AddedPipeLine != null)
+                if (AddedPipeline != null)
                 {
-                    PipeLine pl = EndAddPipeLine();
-                    AddedPipeLine(pl);
+                    Pipeline pl = EndAddPipeline();
+                    AddedPipeline(pl);
                 }
                 else
                 {
-                    CancelAddPipeLine();
+                    CancelAddPipeline();
                 }
             }
         }
@@ -1640,12 +1596,12 @@ namespace YimaWF
         #endregion
 
         #region 管道操作
-        public bool StartAddPipeLine()
+        public bool StartAddPipeline()
         {
-            if (IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) && PipeLineList.Count < YimaEncCtrl.MaxPipeLineZoneNum)
+            if (IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) && PipelineList.Count < YimaEncCtrl.MaxPipelineZoneNum)
             {
                 SetOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE);
-                curPipeLine = new PipeLine();
+                curPipeline = new Pipeline();
                 Invalidate();
                 return true;
             }
@@ -1653,58 +1609,58 @@ namespace YimaWF
                 return false;
         }
 
-        public void ClearLastPipeLinePoint()
+        public void ClearLastPipelinePoint()
         {
             if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
             {
-                if (curPipeLine.PointList.Count > 0)
+                if (curPipeline.PointList.Count > 0)
                 {
-                    curPipeLine.PointList.RemoveAt(curPipeLine.PointList.Count - 1);
+                    curPipeline.PointList.RemoveAt(curPipeline.PointList.Count - 1);
                     Invalidate();
                 }
             }
         }
 
-        public void CancelAddPipeLine()
+        public void CancelAddPipeline()
         {
             if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
             {
-                curPipeLine = null;
+                curPipeline = null;
                 ClearOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE);
                 Invalidate();
             }
         }
 
-        public PipeLine EndAddPipeLine()
+        public Pipeline EndAddPipeline()
         {
-            PipeLine tmp = null;
+            Pipeline tmp = null;
             if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
             {
-                AddPipeLine(curPipeLine);
-                tmp = curPipeLine;
-                curPipeLine = null;
+                AddPipeline(curPipeline);
+                tmp = curPipeline;
+                curPipeline = null;
                 ClearOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE);
                 Invalidate();
             }
             return tmp;
         }
 
-        public bool AddPipeLine(PipeLine pl)
+        public bool AddPipeline(Pipeline pl)
         {
-            if (PipeLineList.Count >= MaxPipeLineZoneNum)
+            if (PipelineList.Count >= MaxPipelineZoneNum)
             {
                 return false;
             }
             else
             {
-                for (int i = 0; i < MaxPipeLineZoneNum; i++)
+                for (int i = 0; i < MaxPipelineZoneNum; i++)
                 {
-                    PipeLine tmp;
-                    if (!PipeLineMap.TryGetValue(i, out tmp))
+                    Pipeline tmp;
+                    if (!PipelineMap.TryGetValue(i, out tmp))
                     {
                         pl.ID = i;
-                        PipeLineMap.Add(i, pl);
-                        PipeLineList.Add(pl);
+                        PipelineMap.Add(i, pl);
+                        PipelineList.Add(pl);
                         break;
                     }
                 }
@@ -1712,39 +1668,39 @@ namespace YimaWF
             }
         }
 
-        public void DeletePipeLineByName(string name)
+        public void DeletePipelineByName(string name)
         {
             int i = 0;
-            foreach (PipeLine pl in PipeLineList)
+            foreach (Pipeline pl in PipelineList)
             {
                 if (pl.Name == name)
                 {
-                    PipeLineMap.Remove(pl.ID);
-                    PipeLineList.RemoveAt(i);
+                    PipelineMap.Remove(pl.ID);
+                    PipelineList.RemoveAt(i);
                     break;
                 }
                 i++;
             }
         }
 
-        public void DeletePipeLineByID(int id)
+        public void DeletePipelineByID(int id)
         {
             int i = 0;
-            foreach (PipeLine pl in PipeLineList)
+            foreach (Pipeline pl in PipelineList)
             {
                 if (pl.ID == id)
                 {
-                    PipeLineMap.Remove(pl.ID);
-                    PipeLineList.RemoveAt(i);
+                    PipelineMap.Remove(pl.ID);
+                    PipelineList.RemoveAt(i);
                     break;
                 }
                 i++;
             }
         }
 
-        public PipeLine FindPipeLineByName(string name)
+        public Pipeline FindPipelineByName(string name)
         {
-            foreach (PipeLine pl in PipeLineList)
+            foreach (Pipeline pl in PipelineList)
             {
                 if (pl.Name == name)
                     return pl;
@@ -1752,9 +1708,9 @@ namespace YimaWF
             return null;
         }
 
-        public void PreviewPipeLine(string name)
+        public void PreviewPipeline(string name)
         {
-            PipeLine pl = FindPipeLineByName(name);
+            Pipeline pl = FindPipelineByName(name);
             if (pl != null && pl.PointList.Count > 0)
             {
                 var p = pl.PointList[0];

@@ -7,12 +7,14 @@ using YimaEncCtrl;
 
 namespace YimaWF.data
 {
-    public class PipeLine
+    public class Pipeline
     {
         public List<GeoPoint> PointList = new List<GeoPoint>();
 
         public int ID = 0;
 
         public string Name;
+        //管道宽度，单位米
+        public int width;
     }
 }
