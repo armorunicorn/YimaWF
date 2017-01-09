@@ -400,7 +400,7 @@ namespace YimaWF
                     C.X = curX + TargetRectFactor;
                     C.Y = curY + TargetRectFactor;
                     D.X = A.X;
-                    D.Y = A.Y - Convert.ToInt32(t.Speed * 5);
+                    D.Y = A.Y - Convert.ToInt32(t.Speed * 2);
                     //根据船的航向旋转三角形
                     Rotate(t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
                     Point[] points = { A, B, C };
@@ -451,8 +451,8 @@ namespace YimaWF
                 Rectangle statusRect;
                 if (t.ShowSignTime == 0)
                 {
-                    //显示简略信息
-                    statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts\n{3}", t.Name, 360 - t.Course, t.Speed, t.ArriveTime);
+                    //显示简略信息（船名、航向角、速度、到达时间）
+                    statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} m/s\n{3}", t.Name, t.Course, t.Speed, t.ArriveTime);
                     if (t.IsCheck)
                     {
 
@@ -476,13 +476,13 @@ namespace YimaWF
                 }
                 else
                 {
-                    //显示基础信息（小标牌）
+                    //显示基础信息（小标牌）——目标来源、船名、国籍、呼号、MIMSI、IMO、航向角、速度
                     statusRect = new Rectangle(B.X - 130 - 20, A.Y - 8 - 10, 140, 90);
-                    statusStr = string.Format("{0} {1} {2} {3}\nMMSI:{4}\nIMO:{5}\n{6:F2}° {7:F2} kts",
+                    statusStr = string.Format("{0} {1} {2} {3}\nMMSI:{4}\nIMO:{5}\n{6:F2}° {7:F2} m/s",
                         t.Source.ToString(), t.Name, t.Nationality, t.CallSign,
                         t.MIMSI,
                         t.IMO,
-                        360 - t.Course, t.Speed);
+                        t.Course, t.Speed);
                     statusBrush = new SolidBrush(Color.FromArgb(255, Color.BurlyWood));
                     g.FillRectangle(statusBrush, statusRect);
                     g.DrawString(statusStr, AppConfig.TargetStatusFont, Brushes.Black, statusRect);
@@ -1855,49 +1855,39 @@ namespace YimaWF
         #endregion
 
         #region 雷达目标操作
-        public bool AddRadarTarget(int radarID, int targetNO, DateTime foundTime, int destination, float speed, float course, 
-            double longitude, double latitude)
+        public bool AddRadarTarget(Target t, double longitude, double latitude)
         {
-            Radar radar = GetRadar(radarID);
+            Radar radar = GetRadar(t.RadarID);
             if (radar == null)
                 //雷达ID错误
                 return false;
             Target tmp;
-            if(radar.TargetMap.TryGetValue(targetNO, out tmp))
+            if(radar.TargetMap.TryGetValue(t.ID, out tmp))
             {
                 //目标已存在
                 return false;
             }
-            tmp = new Target(radarID, targetNO, course, speed);
-            tmp.UpdateTime = foundTime.ToString();
-            tmp.Destination = destination;
-            int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
-            GeoPoint gp = new GeoPoint(Convert.ToInt32(longitude * iGeoCoorMultiFactor), Convert.ToInt32(latitude * iGeoCoorMultiFactor));
-            TrackPoint tp = new TrackPoint(gp);
-            tp.Course = course;
-            tp.Time = foundTime.ToString();
-            tmp.Track.Add(tp);
+            tmp = new Target(t.ID, t.Course, t.Speed);
+            tmp.RadarID = t.RadarID;
+            tmp.UpdateTime = t.UpdateTime;
+            tmp.Distance = t.Distance;
+            AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             radar.TargetMap.Add(tmp.ID, tmp);
             RadarTargetList.Add(tmp);
             return true;
         }
 
-        public void UpdateRadarTarget(int radarID, int targetNO, DateTime foundTime, int destination, float speed, float course,
-            double longitude, double latitude)
+        public void UpdateRadarTarget(Target t, double longitude, double latitude)
         {
-            Target tmp = GetRadarTarget(radarID, targetNO);
+            Target tmp = GetRadarTarget(t.RadarID, t.ID);
             if (tmp == null)
                 return;
-            tmp.Course = course;
-            tmp.Speed = speed;
-            tmp.UpdateTime = foundTime.ToString();
-            tmp.Destination = destination;
-            int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
-            GeoPoint gp = new GeoPoint(Convert.ToInt32(longitude * iGeoCoorMultiFactor), Convert.ToInt32(latitude * iGeoCoorMultiFactor));
-            TrackPoint tp = new TrackPoint(gp);
-            tp.Course = course;
-            tp.Time = foundTime.ToString();
-            tmp.Track.Add(tp);
+            tmp.Course = t.Course;
+            tmp.Speed = t.Speed;
+            tmp.UpdateTime = t.UpdateTime;
+            tmp.Distance = t.Distance;
+            tmp.IsApproach = CheckTargetApproach(tmp.Track.Last().Point, longitude, latitude);
+            AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
         }
 
         public void DeleteRadarTarget(int radarID, int targetNO)
@@ -1934,6 +1924,177 @@ namespace YimaWF
                 //雷达ID错误
                 return null;
             if (!radar.TargetMap.TryGetValue(targetNO, out tmp))
+            {
+                //目标不存在
+                return null;
+            }
+            return tmp;
+        }
+        #endregion
+
+
+        #region AIS目标操作
+        public bool AddAISTarget(Target t, double longitude, double latitude)
+        {
+            Target tmp;
+            if (AISTargetDic.TryGetValue(t.ID, out tmp))
+            {
+                //目标已存在
+                return false;
+            }
+            tmp = new Target(t.ID, t.Course, t.Speed, TargetSource.AIS);
+            tmp.ArriveTime = t.ArriveTime;
+            tmp.AISType = t.AISType;
+            tmp.CallSign = t.CallSign;
+            tmp.Capacity = t.Capacity;
+            tmp.Course = t.Course;
+            tmp.Destination = t.Destination;
+            tmp.Distance = t.Distance;
+            tmp.IMO = t.IMO;
+            tmp.MaxDeep = t.MaxDeep;
+            tmp.MIMSI = t.MIMSI;
+            tmp.Name = t.Name;
+            tmp.Nationality = t.Nationality;
+            tmp.SailStatus = t.SailStatus;
+            tmp.UpdateTime = t.UpdateTime;
+            tmp.Type = t.Type;
+            AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
+            AISTargetDic.Add(t.ID, tmp);
+
+            return true;
+        }
+
+        public bool UpdateAISTarget(Target t, double longitude, double latitude)
+        {
+            Target tmp;
+            if (!AISTargetDic.TryGetValue(t.ID, out tmp))
+            {
+                //目标不存在
+                return false;
+            }
+            tmp.ArriveTime = t.ArriveTime;
+            tmp.AISType = t.AISType;
+            tmp.CallSign = t.CallSign;
+            tmp.Capacity = t.Capacity;
+            tmp.Course = t.Course;
+            tmp.Speed = t.Speed;
+            tmp.Destination = t.Destination;
+            tmp.Distance = t.Distance;
+            tmp.IMO = t.IMO;
+            tmp.MaxDeep = t.MaxDeep;
+            tmp.MIMSI = t.MIMSI;
+            tmp.Name = t.Name;
+            tmp.Nationality = t.Nationality;
+            tmp.SailStatus = t.SailStatus;
+            tmp.UpdateTime = t.UpdateTime;
+            tmp.Type = t.Type;
+            tmp.IsApproach = CheckTargetApproach(tmp.Track.Last().Point, longitude, latitude);
+            AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
+
+            return true;
+        }
+
+        public bool DeleteAISTarget(int id)
+        {
+            Target tmp;
+            if (!AISTargetDic.TryGetValue(id, out tmp))
+            {
+                //目标不存在
+                return false;
+            }
+            AISTargetDic.Remove(id);
+            return true;
+        }
+
+        public Target GetAISTarget(int id)
+        {
+            Target tmp = null;
+            if (!AISTargetDic.TryGetValue(id, out tmp))
+            {
+                //目标不存在
+                return null;
+            }
+            return tmp;
+        }
+        #endregion
+
+        #region 融合目标操作
+        public bool AddMergetTarget(Target t, double longitude, double latitude)
+        {
+            Target tmp;
+            if (MergeTargetDic.TryGetValue(t.ID, out tmp))
+            {
+                //目标已存在
+                return false;
+            }
+            tmp = new Target(t.ID, t.Course, t.Speed, TargetSource.Merge);
+            tmp.ArriveTime = t.ArriveTime;
+            tmp.AISType = t.AISType;
+            tmp.CallSign = t.CallSign;
+            tmp.Capacity = t.Capacity;
+            tmp.Course = t.Course;
+            tmp.Destination = t.Destination;
+            tmp.Distance = t.Distance;
+            tmp.IMO = t.IMO;
+            tmp.MaxDeep = t.MaxDeep;
+            tmp.MIMSI = t.MIMSI;
+            tmp.Name = t.Name;
+            tmp.Nationality = t.Nationality;
+            tmp.SailStatus = t.SailStatus;
+            tmp.UpdateTime = t.UpdateTime;
+            tmp.Type = t.Type;
+            AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
+            MergeTargetDic.Add(t.ID, tmp);
+
+            return true;
+        }
+
+        public bool UpdateMergeTarget(Target t, double longitude, double latitude)
+        {
+            Target tmp;
+            if (!MergeTargetDic.TryGetValue(t.ID, out tmp))
+            {
+                //目标不存在
+                return false;
+            }
+            tmp.ArriveTime = t.ArriveTime;
+            tmp.AISType = t.AISType;
+            tmp.CallSign = t.CallSign;
+            tmp.Capacity = t.Capacity;
+            tmp.Course = t.Course;
+            tmp.Speed = t.Speed;
+            tmp.Destination = t.Destination;
+            tmp.Distance = t.Distance;
+            tmp.IMO = t.IMO;
+            tmp.MaxDeep = t.MaxDeep;
+            tmp.MIMSI = t.MIMSI;
+            tmp.Name = t.Name;
+            tmp.Nationality = t.Nationality;
+            tmp.SailStatus = t.SailStatus;
+            tmp.UpdateTime = t.UpdateTime;
+            tmp.Type = t.Type;
+            tmp.IsApproach = CheckTargetApproach(tmp.Track.Last().Point, longitude, latitude);
+            AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
+
+            return true;
+        }
+
+        public bool DeleteMergeTarget(int id)
+        {
+            Target tmp;
+            if (!MergeTargetDic.TryGetValue(id, out tmp))
+            {
+                //目标不存在
+                return false;
+            }
+            MergeTargetDic.Remove(id);
+            return true;
+        }
+
+        public Target GetMergeTarget(int id)
+        {
+            Target tmp = null;
+            if (!MergeTargetDic.TryGetValue(id, out tmp))
             {
                 //目标不存在
                 return null;
@@ -2004,6 +2165,36 @@ namespace YimaWF
             return retDegreeString;
         }
 
-        
+        private void AddPointToTargetTrack(Target t,string time, float course, double longitude, double latitude)
+        {
+            int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
+            GeoPoint gp = new GeoPoint(Convert.ToInt32(longitude * iGeoCoorMultiFactor), Convert.ToInt32(latitude * iGeoCoorMultiFactor));
+            TrackPoint tp = new TrackPoint(gp);
+            tp.Course = course;
+            tp.Time = time;
+            t.Track.Add(tp);
+        }
+
+        private bool CheckTargetApproach(GeoPoint lastPoint, double longitude, double latitude)
+        {
+            int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
+            GeoPoint cp = new GeoPoint(Convert.ToInt32(longitude * iGeoCoorMultiFactor), Convert.ToInt32(latitude * iGeoCoorMultiFactor));
+            int ox = 0, oy = 0;
+            axYimaEnc.GetScrnPoFromGeoPo(platformGeoPo.x, platformGeoPo.y, ref ox, ref oy);
+            int lx = 0, ly = 0;
+            axYimaEnc.GetScrnPoFromGeoPo(lastPoint.x, lastPoint.y, ref lx, ref ly);
+            int cx = 0, cy = 0;
+            axYimaEnc.GetScrnPoFromGeoPo(cp.x, cp.y, ref cx, ref cy);
+            double ld = Math.Sqrt(Math.Pow(lx - ox, 2) + Math.Pow(ly - oy, 2));
+            double cd = Math.Sqrt(Math.Pow(cx - ox, 2) + Math.Pow(cy - oy, 2));
+            if(cd > ld)
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
     }
 }
