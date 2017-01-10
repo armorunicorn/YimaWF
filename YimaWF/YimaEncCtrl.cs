@@ -70,6 +70,7 @@ namespace YimaWF
         private int TargetRectJudgeFactor = 15;
         private Image plantformImg;
         private Image largeTargetImg;
+        private Image alarmImg;
         private ForbiddenZone curForbiddenZone;
         private Pipeline curPipeline;
         //目标图片切换的比例尺
@@ -190,6 +191,8 @@ namespace YimaWF
             plantformImg = Resources.PlantformImg;
             //加载目标大图标
             largeTargetImg = Resources.LargeTargetImg;
+            //加载告警图标
+            alarmImg = Resources.AlarmImg;
 
             //测试代码
         }
@@ -635,7 +638,13 @@ namespace YimaWF
 
         private void DrawAlarm(Graphics g, Alarm a)
         {
-
+            if (a.Location != null)
+            {
+                int curX = 0, curY = 0;
+                axYimaEnc.GetScrnPoFromGeoPo(a.Location.x, a.Location.y, ref curX, ref curY);
+                var rect = new Rectangle(curX - 16, curY - 16, 32, 32);
+                g.DrawImage(alarmImg, rect);
+            }
         }
 
         private void DrawRangingPoint(Graphics g, GeoPoint startingPoint, GeoPoint terminalPoint)
