@@ -57,6 +57,8 @@ namespace YimaWF
         //key为ID,用来确保ID只能为0到4
         private Dictionary<int, Pipeline> PipelineMap = new Dictionary<int, Pipeline>(5);
 
+        public List<Alarm> AlarmList = new List<Alarm>();
+
         public Config AppConfig;
 
         public Target CurSelectedTarget;
@@ -1824,7 +1826,20 @@ namespace YimaWF
         //告警接口
         public void AddAlarm(int x, int y)
         {
+            Alarm a = new Alarm();
+            a.Location = new GeoPoint(x, y);
+            AlarmList.Add(a);
+        }
 
+        public void DeleteAlarmByLocation(int x, int y)
+        {
+            int i=0;
+            foreach (Alarm a in AlarmList)
+            {
+                if (a.Location == new GeoPoint(x, y))
+                    AlarmList.RemoveAt(i);
+                i++;
+            }
         }
 
         #region 雷达设置
