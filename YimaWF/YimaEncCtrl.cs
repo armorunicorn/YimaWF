@@ -264,6 +264,9 @@ namespace YimaWF
                     foreach (var p in PipelineList)
                         DrawPipeline(g, p);
 
+                    foreach (var a in AlarmList)
+                        DrawAlarm(g, a);
+
                     //多边形保护区绘制模式
                     if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
                     {
@@ -795,7 +798,7 @@ namespace YimaWF
                         int y = Math.Abs(terminalY - startingY);
                         int scanLen = Convert.ToInt32(Math.Sqrt(x * x + y * y));
                         int geoLen = Convert.ToInt32(axYimaEnc.GetGeoLenFromScrnLen(scanLen));
-                        ShowRangingResult?.Invoke(geoLen);
+                        ShowRangingResult.Invoke(geoLen);
                     }
                 }
             }
@@ -983,7 +986,7 @@ namespace YimaWF
         private void ShowDetail_Click(object sender, EventArgs e)
         {
             if(CurSelectedTarget != null)
-                ShowTargetDetail?.Invoke(CurSelectedTarget);
+                ShowTargetDetail.Invoke(CurSelectedTarget);
         }
         #region 雷达绘图函数
         private int optRate = 0;
@@ -1329,7 +1332,7 @@ namespace YimaWF
 
         private void OptLinkageToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            TargetOptLinkage?.Invoke(null);
+            TargetOptLinkage.Invoke(null);
         }
 
         #region 海图操作接口
@@ -1833,12 +1836,10 @@ namespace YimaWF
 
         public void DeleteAlarmByLocation(int x, int y)
         {
-            int i=0;
-            foreach (Alarm a in AlarmList)
+            for(int i=0;i<AlarmList.Count;i++)
             {
-                if (a.Location == new GeoPoint(x, y))
+                if (AlarmList[i].Location.x == x && AlarmList[i].Location.y == y)
                     AlarmList.RemoveAt(i);
-                i++;
             }
         }
 
