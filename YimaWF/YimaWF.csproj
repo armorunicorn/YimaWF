@@ -30,12 +30,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AxInterop.YIMAENCLib">
-      <HintPath>..\..\WPFTest\WPFTest\bin\Debug\AxInterop.YIMAENCLib.dll</HintPath>
+    <Reference Include="AxInterop.YIMAENCLib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\AxInterop.YIMAENCLib.dll</HintPath>
     </Reference>
-    <Reference Include="Interop.YIMAENCLib">
-      <HintPath>..\..\YimaTest\YimaTest\bin\Debug\Interop.YIMAENCLib.dll</HintPath>
+    <Reference Include="Interop.YIMAENCLib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <EmbedInteropTypes>True</EmbedInteropTypes>
+      <HintPath>bin\Interop.YIMAENCLib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -100,6 +102,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\Target.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources\警告.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

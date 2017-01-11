@@ -57,6 +57,8 @@ namespace YimaWF
         //key为ID,用来确保ID只能为0到4
         private Dictionary<int, Pipeline> PipelineMap = new Dictionary<int, Pipeline>(5);
 
+        public List<Alarm> AlarmList = new List<Alarm>();
+
         public Config AppConfig;
 
         public Target CurSelectedTarget;
@@ -70,6 +72,7 @@ namespace YimaWF
         private int TargetRectJudgeFactor = 15;
         private Image plantformImg;
         private Image largeTargetImg;
+        private Image alarmImg;
         private ForbiddenZone curForbiddenZone;
         private Pipeline curPipeline;
         //目标图片切换的比例尺
@@ -190,6 +193,8 @@ namespace YimaWF
             plantformImg = Resources.PlantformImg;
             //加载目标大图标
             largeTargetImg = Resources.LargeTargetImg;
+            //加载告警图标
+            alarmImg = Resources.AlarmImg;
 
             //测试代码
         }
@@ -258,6 +263,9 @@ namespace YimaWF
 
                     foreach (var p in PipelineList)
                         DrawPipeline(g, p);
+
+                    foreach (var a in AlarmList)
+                        DrawAlarm(g, a);
 
                     //多边形保护区绘制模式
                     if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
@@ -635,7 +643,13 @@ namespace YimaWF
 
         private void DrawAlarm(Graphics g, Alarm a)
         {
-
+            if (a.Location != null)
+            {
+                int curX = 0, curY = 0;
+                axYimaEnc.GetScrnPoFromGeoPo(a.Location.x, a.Location.y, ref curX, ref curY);
+                var rect = new Rectangle(curX - 16, curY - 16, 32, 32);
+                g.DrawImage(alarmImg, rect);
+            }
         }
 
         private void DrawRangingPoint(Graphics g, GeoPoint startingPoint, GeoPoint terminalPoint)
@@ -784,7 +798,7 @@ namespace YimaWF
                         int y = Math.Abs(terminalY - startingY);
                         int scanLen = Convert.ToInt32(Math.Sqrt(x * x + y * y));
                         int geoLen = Convert.ToInt32(axYimaEnc.GetGeoLenFromScrnLen(scanLen));
-                        ShowRangingResult?.Invoke(geoLen);
+                        ShowRangingResult.Invoke(geoLen);
                     }
                 }
             }
@@ -972,7 +986,7 @@ namespace YimaWF
         private void ShowDetail_Click(object sender, EventArgs e)
         {
             if(CurSelectedTarget != null)
-                ShowTargetDetail?.Invoke(CurSelectedTarget);
+                ShowTargetDetail.Invoke(CurSelectedTarget);
         }
         #region 雷达绘图函数
         private int optRate = 0;
@@ -1318,7 +1332,7 @@ namespace YimaWF
 
         private void OptLinkageToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            TargetOptLinkage?.Invoke(null);
+            TargetOptLinkage.Invoke(null);
         }
 
         #region 海图操作接口
@@ -1815,7 +1829,18 @@ namespace YimaWF
         //告警接口
         public void AddAlarm(int x, int y)
         {
+            Alarm a = new Alarm();
+            a.Location = new GeoPoint(x, y);
+            AlarmList.Add(a);
+        }
 
+        public void DeleteAlarmByLocation(int x, int y)
+        {
+            for(int i=0;i<AlarmList.Count;i++)
+            {
+                if (AlarmList[i].Location.x == x && AlarmList[i].Location.y == y)
+                    AlarmList.RemoveAt(i);
+            }
         }
 
         #region 雷达设置
