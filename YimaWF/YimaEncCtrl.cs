@@ -41,8 +41,8 @@ namespace YimaWF
         private int statusStripHeight = 22;
 
         public Dictionary<int, Target> AISTargetDic = new Dictionary<int, Target>();
-        //public Dictionary<int, Target> RadarTargetDic = new Dictionary<int, Target>();
         public Dictionary<int, Target> MergeTargetDic = new Dictionary<int, Target>();
+        public List<Target> AllTargetList = new List<Target>();
 
         public List<Target> RadarTargetList = new List<Target>();
 
@@ -776,6 +776,7 @@ namespace YimaWF
                     {
                         terminalRangingPoint = new GeoPoint(geoPoX, geoPoY);
                         Invalidate();
+                        //计算两点间的距离，然后调用回调显示
                         int startingX = 0, startingY = 0;
                         int terminalX = 0, terminalY = 0;
                         axYimaEnc.GetScrnPoFromGeoPo(startingRangingPoint.x, startingRangingPoint.y, ref startingX, ref startingY);
@@ -785,6 +786,7 @@ namespace YimaWF
                         int scanLen = Convert.ToInt32(Math.Sqrt(x * x + y * y));
                         int geoLen = Convert.ToInt32(axYimaEnc.GetGeoLenFromScrnLen(scanLen));
                         ShowRangingResult?.Invoke(geoLen);
+                        EndRanging();
                     }
                 }
             }
@@ -1143,35 +1145,35 @@ namespace YimaWF
         private void ShowRadarTargetItem_Click(object sender, EventArgs e)
         {
             ShowRadarTargetItem.Checked = !ShowRadarTargetItem.Checked;
-            SetDisplayMode(DISPLAY_MODE.READER, !showRadarTarget);
+            SetDisplayMode(TARGET_TYPE.READER, !showRadarTarget);
             Invalidate();
         }
 
         private void ShowAISTargetItem_Click(object sender, EventArgs e)
         {
             ShowAISTargetItem.Checked = !ShowAISTargetItem.Checked;
-            SetDisplayMode(DISPLAY_MODE.AIS, !showAISTarget);
+            SetDisplayMode(TARGET_TYPE.AIS, !showAISTarget);
             Invalidate();
         }
 
         private void ShowMergeTargetItem_Click(object sender, EventArgs e)
         {
             ShowMergeTargetItem.Checked = !ShowMergeTargetItem.Checked;
-            SetDisplayMode(DISPLAY_MODE.MERGER, !showMergeTarget);
+            SetDisplayMode(TARGET_TYPE.MERGER, !showMergeTarget);
             Invalidate();
         }
 
         private void ShowOptMenuItem_Click(object sender, EventArgs e)
         {
             ShowOptMenuItem.Checked = !ShowOptMenuItem.Checked;
-            SetDisplayMode(DISPLAY_MODE.OPTLINE, !showOpt);
+            SetDisplayMode(TARGET_TYPE.OPTLINE, !showOpt);
             Invalidate();
         }
 
         private void ShowRadarMenuItem_Click(object sender, EventArgs e)
         {
             ShowRadarMenuItem.Checked = !ShowRadarMenuItem.Checked;
-            SetDisplayMode(DISPLAY_MODE.RADARLINE, !showRadar);
+            SetDisplayMode(TARGET_TYPE.RADARLINE, !showRadar);
             Invalidate();
         }
 
@@ -1327,15 +1329,16 @@ namespace YimaWF
             axYimaEnc.SetDisplayCategory((short)displayType);
         }
 
-        public void SetPlatform(int x, int y)
+        public void SetPlatform(double longitude, double latitude)
         {
-            GeoPoint p = new GeoPoint(x, y);
+            GeoPoint p = GetGeoPoint(longitude, latitude);
             platformGeoPo = p;
         }
 
-        public void CenterMap(int x, int y)
+        public void CenterMap(double longitude, double latitude)
         {
-            axYimaEnc.CenterMap(x, y);
+            GeoPoint p = GetGeoPoint(longitude, latitude);
+            axYimaEnc.CenterMap(p.x, p.y);
         }
 
         public void CenterMap()
@@ -1363,31 +1366,31 @@ namespace YimaWF
             Invalidate();
         }
 
-        public void SetDisplayMode(DISPLAY_MODE mode, bool isShow)
+        public void SetDisplayMode(TARGET_TYPE type, bool isShow)
         {
-            switch (mode)
+            switch (type)
             {
-                case DISPLAY_MODE.READER:
+                case TARGET_TYPE.READER:
                     showRadarTarget = isShow;
                     break;
-                case DISPLAY_MODE.AIS:
+                case TARGET_TYPE.AIS:
                     showAISTarget = isShow;
                     break;
-                case DISPLAY_MODE.MERGER:
+                case TARGET_TYPE.MERGER:
                     showMergeTarget = isShow;
                     break;
-                case DISPLAY_MODE.RADARLINE:
+                case TARGET_TYPE.RADARLINE:
                     showRadar = isShow;
                     break;
-                case DISPLAY_MODE.OPTLINE:
+                case TARGET_TYPE.OPTLINE:
                     showOpt = isShow;
                     break;
             }
         }
 
-        public void SetShowTrackOrNot(bool show)
+        public void SetShowTrackOrNot(bool isShow)
         {
-            showTrack = show;
+            showTrack = isShow;
             var dicList = new List<Target>[] { AISTargetDic.Values.ToList(), MergeTargetDic.Values.ToList(), RadarTargetList };
             foreach(var list in dicList)
                 foreach(var t in list)
@@ -1741,6 +1744,7 @@ namespace YimaWF
         }
 
         #endregion
+
         #region 图库管理接口
         public List<string> GetMapList()
         {
@@ -1874,46 +1878,41 @@ namespace YimaWF
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             radar.TargetMap.Add(tmp.ID, tmp);
             RadarTargetList.Add(tmp);
+            AllTargetList.Add(tmp);
             return true;
         }
 
-        public void UpdateRadarTarget(Target t, double longitude, double latitude)
+        public bool UpdateRadarTarget(Target t, double longitude, double latitude)
         {
             Target tmp = GetRadarTarget(t.RadarID, t.ID);
             if (tmp == null)
-                return;
+                return false;
             tmp.Course = t.Course;
             tmp.Speed = t.Speed;
             tmp.UpdateTime = t.UpdateTime;
             tmp.Distance = t.Distance;
             tmp.IsApproach = CheckTargetApproach(tmp.Track.Last().Point, longitude, latitude);
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
+            return true;
         }
 
-        public void DeleteRadarTarget(int radarID, int targetNO)
+        public bool DeleteRadarTarget(int radarID, int targetNO)
         {
             Radar radar = GetRadar(radarID);
             if (radar == null)
                 //雷达ID错误
-                return;
+                return false;
             Target tmp;
             if (!radar.TargetMap.TryGetValue(targetNO, out tmp))
             {
                 //目标不存在
-                return;
+                return false;
             }
             //删除map和list中的类
             radar.TargetMap.Remove(tmp.ID);
-            int count = 0;
-            foreach(var t in RadarTargetList)
-            {
-                if (t.ID == targetNO && t.RadarID == radarID)
-                {
-                    RadarTargetList.RemoveAt(count);
-                    break;
-                }
-                count++;
-            }
+            RemoveTargetFromList(tmp, RadarTargetList);
+            RemoveTargetFromList(tmp, AllTargetList);
+            return true;
         }
 
         public Target GetRadarTarget(int radarID, int targetNO)
@@ -1960,7 +1959,7 @@ namespace YimaWF
             tmp.Type = t.Type;
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             AISTargetDic.Add(t.ID, tmp);
-
+            AllTargetList.Add(tmp);
             return true;
         }
 
@@ -2003,6 +2002,7 @@ namespace YimaWF
                 return false;
             }
             AISTargetDic.Remove(id);
+            RemoveTargetFromList(tmp, AllTargetList);
             return true;
         }
 
@@ -2045,7 +2045,7 @@ namespace YimaWF
             tmp.Type = t.Type;
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             MergeTargetDic.Add(t.ID, tmp);
-
+            AllTargetList.Add(tmp);
             return true;
         }
 
@@ -2088,6 +2088,7 @@ namespace YimaWF
                 return false;
             }
             MergeTargetDic.Remove(id);
+            RemoveTargetFromList(tmp, AllTargetList);
             return true;
         }
 
@@ -2167,12 +2168,27 @@ namespace YimaWF
 
         private void AddPointToTargetTrack(Target t,string time, float course, double longitude, double latitude)
         {
-            int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
-            GeoPoint gp = new GeoPoint(Convert.ToInt32(longitude * iGeoCoorMultiFactor), Convert.ToInt32(latitude * iGeoCoorMultiFactor));
+            GeoPoint gp = GetGeoPoint(longitude, latitude);
+            if (gp == null)
+                return;
             TrackPoint tp = new TrackPoint(gp);
             tp.Course = course;
             tp.Time = time;
             t.Track.Add(tp);
+        }
+
+        private GeoPoint GetGeoPoint(double longitude, double latitude)
+        {
+            try
+            {
+                int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
+                GeoPoint gp = new GeoPoint(Convert.ToInt32(longitude * iGeoCoorMultiFactor), Convert.ToInt32(latitude * iGeoCoorMultiFactor));
+                return gp;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private bool CheckTargetApproach(GeoPoint lastPoint, double longitude, double latitude)
@@ -2194,6 +2210,25 @@ namespace YimaWF
             else
             {
                 return true;
+            }
+        }
+
+        private void RemoveTargetFromList(Target t, List<Target> list)
+        {
+            int i = 0;
+            foreach(Target tmp in list)
+            {
+                if(tmp.Source == t.Source && tmp.ID == t.ID)
+                {
+                    if(t.Source == TargetSource.Radar)
+                    {
+                        if (t.RadarID != tmp.RadarID)
+                            continue;
+                    }
+                    list.RemoveAt(i);
+                    break;
+                }
+                i++;
             }
         }
     }

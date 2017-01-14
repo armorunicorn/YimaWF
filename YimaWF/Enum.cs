@@ -71,7 +71,7 @@
     }
 
     //显示模式
-    public enum DISPLAY_MODE
+    public enum TARGET_TYPE
     {
         READER,
         AIS,
