@@ -14,7 +14,7 @@ namespace YimaWF.data
         public int ID = 0;
 
         public string Name;
-        //管道宽度，单位米
-        public int width;
+        //管道宽度，单位毫米
+        public int width = 1000;
     }
 }

@@ -56,6 +56,8 @@ namespace YimaWF
         public List<Pipeline> PipelineList = new List<Pipeline>();
         //key为ID,用来确保ID只能为0到4
         private Dictionary<int, Pipeline> PipelineMap = new Dictionary<int, Pipeline>(5);
+        //告警目标列表
+        public List<Target> AlarmTargetList = new List<Target>();
 
         public Config AppConfig;
 
@@ -70,6 +72,7 @@ namespace YimaWF
         private int TargetRectJudgeFactor = 15;
         private Image plantformImg;
         private Image largeTargetImg;
+        private Image alarmImg;
         private ForbiddenZone curForbiddenZone;
         private Pipeline curPipeline;
         //目标图片切换的比例尺
@@ -78,6 +81,12 @@ namespace YimaWF
         //测距使用的内部全局变量
         private GeoPoint startingRangingPoint;
         private GeoPoint terminalRangingPoint;
+        //大比例尺下管道最大宽度
+        //private readonly int largeScalePipelineMaxWidth = 10;
+        //小比例尺下管道最大宽度
+        //private readonly int smallScalePipelineMaxWidth = 6;
+        //管道最大宽度,单位：毫米
+        //private readonly int pipelineMaxWidth = 1000;
 
         #region 回调
         public event TargetSelectDelegate TargetSelect;
@@ -190,7 +199,8 @@ namespace YimaWF
             plantformImg = Resources.PlantformImg;
             //加载目标大图标
             largeTargetImg = Resources.LargeTargetImg;
-
+            //加载告警图片
+            alarmImg = Resources.AlarmImg;
             //测试代码
         }
 
@@ -422,8 +432,17 @@ namespace YimaWF
                     //根据船的航向旋转图形
                     Rotate(t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
                     Point[] points = { A, B, C, D };
-                    //画出船的图标
-                    g.FillPolygon(brush, points);
+                    //无告警时显示正常图标
+                    if (t.Alarm == AlarmType.None)
+                    {
+                        //画出船的图标
+                        g.FillPolygon(brush, points);
+                    }
+                    else
+                    {
+                        var rect = new Rectangle(curX - 16, curY - 16, 32, 32);
+                        g.DrawImage(alarmImg, rect);
+                    }
                 }
                 else if (t.Source == TargetSource.Radar)
                 {
@@ -466,18 +485,18 @@ namespace YimaWF
 
                     if (t.Source == TargetSource.Merge)
                     {
-                        statusRect = new Rectangle(B.X + TargetRectFactor, B.Y, 80, 60);
+                        statusRect = new Rectangle(B.X + TargetRectFactor, B.Y, 90, 60);
                     }
                     else
                     {
-                        statusRect = new Rectangle(B.X - 80, A.Y - 8 - 10, 80, 60);
+                        statusRect = new Rectangle(B.X - 90, A.Y - 8 - 10, 90, 60);
                     }
                     g.DrawString(statusStr, AppConfig.TargetStatusFont, statusBrush, statusRect);
                 }
                 else
                 {
                     //显示基础信息（小标牌）——目标来源、船名、国籍、呼号、MIMSI、IMO、航向角、速度
-                    statusRect = new Rectangle(B.X - 130 - 20, A.Y - 8 - 10, 140, 90);
+                    statusRect = new Rectangle(B.X - 150 - 20, A.Y - 8 - 10, 140, 90);
                     statusStr = string.Format("{0} {1} {2} {3}\nMMSI:{4}\nIMO:{5}\n{6:F2}° {7:F2} m/s",
                         t.Source.ToString(), t.Name, t.Nationality, t.CallSign,
                         t.MIMSI,
@@ -538,7 +557,10 @@ namespace YimaWF
             {
                 //大比例尺时则只绘制目标大图标（图片）
                 var rect = new Rectangle(curX - 16, curY - 16, 32, 32);
-                g.DrawImage(largeTargetImg, rect);
+                if(t.Alarm == AlarmType.None)
+                    g.DrawImage(largeTargetImg, rect);
+                else
+                    g.DrawImage(alarmImg, rect);
             }
         }
 
@@ -612,14 +634,15 @@ namespace YimaWF
         private void DrawPipeline(Graphics g, Pipeline p)
         {
             var pen = new Pen(Color.Black);
-            if (axYimaEnc.GetCurrentScale() > 1000000)
+            /*if (axYimaEnc.GetCurrentScale() > 1000000)
             {
                 pen.Width = 2;
             }
             else
             {
                 pen.Width = 5;
-            }
+            }*/
+            pen.Width = axYimaEnc.GetScrnLenFromGeoLen(p.width) * 2;
 
             int curX = 0, curY = 0;
             List<Point> list = new List<Point>();
@@ -754,9 +777,12 @@ namespace YimaWF
                 }
                 else if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
                 {
-                    axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
-                    curForbiddenZone.PointList.Add(new GeoPoint(geoPoX, geoPoY));
-                    Invalidate();
+                    if (curForbiddenZone.PointList.Count < 10)
+                    {
+                        axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
+                        curForbiddenZone.PointList.Add(new GeoPoint(geoPoX, geoPoY));
+                        Invalidate();
+                    }
                 }
                 else if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
                 {
@@ -1816,12 +1842,6 @@ namespace YimaWF
         }
         #endregion
 
-        //告警接口
-        public void AddAlarm(int x, int y)
-        {
-
-        }
-
         #region 雷达设置
         //雷达角度设置
         public void SetRadarAngle(int angle, int ID)
@@ -2043,6 +2063,12 @@ namespace YimaWF
             tmp.SailStatus = t.SailStatus;
             tmp.UpdateTime = t.UpdateTime;
             tmp.Type = t.Type;
+            if (t.Alarm != AlarmType.None)
+            {
+                tmp.Alarm = t.Alarm;
+                tmp.AlarmID = t.AlarmID;
+                AlarmTargetList.Add(tmp);
+            }
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             MergeTargetDic.Add(t.ID, tmp);
             AllTargetList.Add(tmp);
@@ -2074,6 +2100,7 @@ namespace YimaWF
             tmp.UpdateTime = t.UpdateTime;
             tmp.Type = t.Type;
             tmp.IsApproach = CheckTargetApproach(tmp.Track.Last().Point, longitude, latitude);
+            UpdateAlarmStatus(tmp, t.Alarm, t.AlarmID);
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
 
             return true;
@@ -2089,6 +2116,8 @@ namespace YimaWF
             }
             MergeTargetDic.Remove(id);
             RemoveTargetFromList(tmp, AllTargetList);
+            if (tmp.Alarm != AlarmType.None)
+                RemoveTargetFromList(tmp, AlarmTargetList);
             return true;
         }
 
@@ -2223,13 +2252,60 @@ namespace YimaWF
                     if(t.Source == TargetSource.Radar)
                     {
                         if (t.RadarID != tmp.RadarID)
+                        {
+                            i++;
                             continue;
+                        }
                     }
                     list.RemoveAt(i);
                     break;
                 }
                 i++;
             }
+        }
+
+        private int GetTargetPosInList(List<Target> list, Target t)
+        {
+            int pos = 0;
+            foreach(var tmp in list)
+            {
+                if(t.Source == tmp.Source && t.ID == tmp.ID)
+                {
+                    if(tmp.Source == TargetSource.Radar)
+                    {
+                        if(tmp.RadarID != t.RadarID)
+                        {
+                            pos++;
+                            continue;
+                        }
+                    }
+                    return pos;
+                }
+                pos++;
+            }
+            return -1;
+        }
+
+        private void UpdateAlarmStatus(Target t, AlarmType alarm, int alarmID)
+        {
+            if (alarm != AlarmType.None)
+            {
+                if (t.Alarm == AlarmType.None)
+                {
+                    //目标状态由无警告->有警告，此时需要将目标添加入告警目标列表
+                    AlarmTargetList.Add(t);
+                }
+            }
+            else
+            {
+                if(t.Alarm != AlarmType.None)
+                {
+                    //目标状态由由告警->无告警，此时需要将目标从告警目标列表中剔除
+                    RemoveTargetFromList(t, AlarmTargetList);
+                }
+            }
+            t.Alarm = alarm;
+            t.AlarmID = alarmID;
         }
     }
 }

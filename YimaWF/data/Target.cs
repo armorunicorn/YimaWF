@@ -13,6 +13,14 @@ namespace YimaWF.data
         Radar, 
         Merge
     }
+    //告警类型
+    public enum AlarmType
+    {
+        None, //无告警
+        ProtectZone, //圆形保护区告警
+        ForbiddenZone, //多边形保护区告警
+        Pipeline //管道告警
+    }
 
     public enum TargetType
     {
@@ -68,6 +76,8 @@ namespace YimaWF.data
         public byte DataType;
         //子源个数
         public byte SrcNum;
+        public AlarmType Alarm = AlarmType.None;
+        public int AlarmID = -1;
         #endregion
 
 
