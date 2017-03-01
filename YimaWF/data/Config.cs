@@ -12,9 +12,13 @@ namespace YimaWF.data
     {
         public Dictionary<TargetType, Color> TartgetColor = new Dictionary<TargetType, Color>();
         public Font TargetStatusFont;
+        public Font RangFont;
         public Color ProtectZonePen;
         public Pen TargetSelectPen;
         public Color ApproachRadarTarget;
         public Color AloofRadarTarget;
+        public Pen RadarPen;
+        public int RadarCirclesNum = 0;
+        public int RadarIntervalLineCount = 0;
     }
 }

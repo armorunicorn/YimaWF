@@ -7,12 +7,9 @@ using YimaEncCtrl;
 
 namespace YimaWF.data
 {
-    public class Alarm
+    public class RangPoint
     {
-        public GeoPoint Location;
-
-        public Target RelativeTarget;
-
-        public bool Checked = false;
+        public GeoPoint Point;
+        public int LenToLastPoing;
     }
 }

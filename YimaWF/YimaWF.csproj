@@ -56,6 +56,7 @@
     <Compile Include="data\Pipeline.cs" />
     <Compile Include="data\ProtectZone.cs" />
     <Compile Include="data\Radar.cs" />
+    <Compile Include="data\RangPoint.cs" />
     <Compile Include="data\Target.cs" />
     <Compile Include="data\TrackPoint.cs" />
     <Compile Include="Enum.cs" />

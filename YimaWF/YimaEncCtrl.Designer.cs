@@ -42,6 +42,7 @@
             this.ShowDetail = new System.Windows.Forms.ToolStripMenuItem();
             this.OptLinkageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ShowTrackMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.TargetCenterToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RadarTimer = new System.Windows.Forms.Timer(this.components);
             this.normalContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.ShowRadarTargetItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -55,6 +56,8 @@
             this.CancelAdd = new System.Windows.Forms.ToolStripMenuItem();
             this.CancelPoint = new System.Windows.Forms.ToolStripMenuItem();
             this.EndAdd = new System.Windows.Forms.ToolStripMenuItem();
+            this.AutoTrackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.ManualTrackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.axYimaEnc)).BeginInit();
             this.statusStrip1.SuspendLayout();
             this.targetContextMenu.SuspendLayout();
@@ -121,7 +124,6 @@
             // 
             // TargetDataTimer
             // 
-            this.TargetDataTimer.Enabled = true;
             this.TargetDataTimer.Interval = 50;
             this.TargetDataTimer.Tick += new System.EventHandler(this.TargetDataTimer_Tick);
             // 
@@ -130,21 +132,24 @@
             this.targetContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.ShowDetail,
             this.OptLinkageToolStripMenuItem,
-            this.ShowTrackMenuItem});
+            this.ShowTrackMenuItem,
+            this.TargetCenterToolStripMenuItem,
+            this.AutoTrackToolStripMenuItem,
+            this.ManualTrackToolStripMenuItem});
             this.targetContextMenu.Name = "targetContextMenu";
-            this.targetContextMenu.Size = new System.Drawing.Size(149, 70);
+            this.targetContextMenu.Size = new System.Drawing.Size(153, 158);
             // 
             // ShowDetail
             // 
             this.ShowDetail.Name = "ShowDetail";
-            this.ShowDetail.Size = new System.Drawing.Size(148, 22);
+            this.ShowDetail.Size = new System.Drawing.Size(152, 22);
             this.ShowDetail.Text = "目标详细信息";
             this.ShowDetail.Click += new System.EventHandler(this.ShowDetail_Click);
             // 
             // OptLinkageToolStripMenuItem
             // 
             this.OptLinkageToolStripMenuItem.Name = "OptLinkageToolStripMenuItem";
-            this.OptLinkageToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.OptLinkageToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.OptLinkageToolStripMenuItem.Text = "光电联动";
             this.OptLinkageToolStripMenuItem.Click += new System.EventHandler(this.OptLinkageToolStripMenuItem_Click);
             // 
@@ -153,9 +158,16 @@
             this.ShowTrackMenuItem.Checked = true;
             this.ShowTrackMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.ShowTrackMenuItem.Name = "ShowTrackMenuItem";
-            this.ShowTrackMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.ShowTrackMenuItem.Size = new System.Drawing.Size(152, 22);
             this.ShowTrackMenuItem.Text = "显示航迹";
             this.ShowTrackMenuItem.Click += new System.EventHandler(this.ShowTrackMenuItem_Click);
+            // 
+            // TargetCenterToolStripMenuItem
+            // 
+            this.TargetCenterToolStripMenuItem.Name = "TargetCenterToolStripMenuItem";
+            this.TargetCenterToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.TargetCenterToolStripMenuItem.Text = "目标居中";
+            this.TargetCenterToolStripMenuItem.Click += new System.EventHandler(this.TargetCenterToolStripMenuItem_Click);
             // 
             // RadarTimer
             // 
@@ -244,28 +256,42 @@
             this.CancelPoint,
             this.EndAdd});
             this.addContextMenu.Name = "addFZContextMenu";
-            this.addContextMenu.Size = new System.Drawing.Size(153, 92);
+            this.addContextMenu.Size = new System.Drawing.Size(125, 70);
             // 
             // CancelAdd
             // 
             this.CancelAdd.Name = "CancelAdd";
-            this.CancelAdd.Size = new System.Drawing.Size(152, 22);
+            this.CancelAdd.Size = new System.Drawing.Size(124, 22);
             this.CancelAdd.Text = "取消添加";
             this.CancelAdd.Click += new System.EventHandler(this.CancelAdd_Click);
             // 
             // CancelPoint
             // 
             this.CancelPoint.Name = "CancelPoint";
-            this.CancelPoint.Size = new System.Drawing.Size(152, 22);
+            this.CancelPoint.Size = new System.Drawing.Size(124, 22);
             this.CancelPoint.Text = "撤销";
             this.CancelPoint.Click += new System.EventHandler(this.CancelPoint_Click);
             // 
             // EndAdd
             // 
             this.EndAdd.Name = "EndAdd";
-            this.EndAdd.Size = new System.Drawing.Size(152, 22);
+            this.EndAdd.Size = new System.Drawing.Size(124, 22);
             this.EndAdd.Text = "完成绘制";
             this.EndAdd.Click += new System.EventHandler(this.EndAdd_Click);
+            // 
+            // AutoTrackToolStripMenuItem
+            // 
+            this.AutoTrackToolStripMenuItem.Name = "AutoTrackToolStripMenuItem";
+            this.AutoTrackToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.AutoTrackToolStripMenuItem.Text = "自动跟踪";
+            this.AutoTrackToolStripMenuItem.Click += new System.EventHandler(this.AutoTrackToolStripMenuItem_Click);
+            // 
+            // ManualTrackToolStripMenuItem
+            // 
+            this.ManualTrackToolStripMenuItem.Name = "ManualTrackToolStripMenuItem";
+            this.ManualTrackToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.ManualTrackToolStripMenuItem.Text = "手动跟踪";
+            this.ManualTrackToolStripMenuItem.Click += new System.EventHandler(this.ManualTrackToolStripMenuItem_Click);
             // 
             // YimaEncCtrl
             // 
@@ -313,5 +339,8 @@
         private System.Windows.Forms.ToolStripMenuItem CancelAdd;
         private System.Windows.Forms.ToolStripMenuItem CancelPoint;
         private System.Windows.Forms.ToolStripMenuItem EndAdd;
+        private System.Windows.Forms.ToolStripMenuItem TargetCenterToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem AutoTrackToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem ManualTrackToolStripMenuItem;
     }
 }

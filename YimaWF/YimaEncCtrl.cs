@@ -24,6 +24,8 @@ namespace YimaWF
     public delegate void AddedForbiddenZoneDelegate(ForbiddenZone f);
     public delegate void AddedPipelineDelegate(Pipeline pl);
     public delegate void ShowRangingResultDelegate(int len);
+    public delegate void AutoTrackTargetDelegate(Target t);
+    public delegate void ManualTrackTargetDelegate(Target t);
 
     public partial class YimaEncCtrl: UserControl
     {
@@ -79,8 +81,9 @@ namespace YimaWF
         private int targetChangeScale = 2107260;
 
         //测距使用的内部全局变量
-        private GeoPoint startingRangingPoint;
-        private GeoPoint terminalRangingPoint;
+        //private GeoPoint startingRangingPoint;
+        //private GeoPoint terminalRangingPoint;
+        private List<RangPoint> RangingPoingList = new List<RangPoint>();
         //大比例尺下管道最大宽度
         //private readonly int largeScalePipelineMaxWidth = 10;
         //小比例尺下管道最大宽度
@@ -95,6 +98,8 @@ namespace YimaWF
         public event AddedForbiddenZoneDelegate AddedForbiddenZone;
         public event AddedPipelineDelegate AddedPipeline;
         public event ShowRangingResultDelegate ShowRangingResult;
+        public event AutoTrackTargetDelegate AutoTrackTarget;
+        public event AutoTrackTargetDelegate ManualTrackTarget;
         #endregion
 
         CURRENT_SUB_OPERATION m_curOperation = CURRENT_SUB_OPERATION.NO_OPERATION;
@@ -112,9 +117,9 @@ namespace YimaWF
         private Color cScanColor = Color.FromArgb(0, 255, 0);
         private int startAngle = 0;
         //雷达圆在图上的半径（像素）
-        private float radius;
+        //private float radius;
         //雷达的物理半径（毫米）
-        private int geoRadius;
+        //private int geoRadius;
         //天线点value的下限值
         private float min = 0;
         //天线点value的上限值
@@ -177,8 +182,8 @@ namespace YimaWF
             axYimaEnc.CenterMap(platformGeoPo.x, platformGeoPo.y);
             Init();
             //雷达范围默认20km
-            geoRadius = 20000000;
-            radius = axYimaEnc.GetScrnLenFromGeoLen(geoRadius);
+            //geoRadius = 20000000;
+            //radius = axYimaEnc.GetScrnLenFromGeoLen(geoRadius);
             //Console.WriteLine(radius);
             optGeoRadius = 5000000;
             optRadius = axYimaEnc.GetScrnLenFromGeoLen(optGeoRadius);
@@ -194,6 +199,7 @@ namespace YimaWF
             RefreshScaleStatusBar();
             //axYimaEnc.DrawRadar += AxYimaEnc_DrawRadar;
             RadarTimer.Enabled = false;
+            TargetDataTimer.Enabled = true;
 
             //加载平台图片
             plantformImg = Resources.PlantformImg;
@@ -238,10 +244,14 @@ namespace YimaWF
             AppConfig.TartgetColor.Add(TargetType.MerChantBoat, Color.FromArgb(205, 0, 205));
             AppConfig.TartgetColor.Add(TargetType.VietnamFishingBoat, Color.FromArgb(255, 0, 0));
             AppConfig.TargetStatusFont = new Font("宋体", 10);
+            AppConfig.RangFont = new Font("宋体", 15);
             AppConfig.ProtectZonePen = Color.Red;
             AppConfig.TargetSelectPen = Pens.Red;
             AppConfig.ApproachRadarTarget = Color.Red;
             AppConfig.AloofRadarTarget = Color.Green;
+            AppConfig.RadarPen = Pens.Green;
+            AppConfig.RadarCirclesNum = 5;
+            AppConfig.RadarIntervalLineCount = 8;
         }
 
 
@@ -282,9 +292,10 @@ namespace YimaWF
                         DrawPipeline(g, curPipeline);
                         break;
                     }
-                    if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
+                    //测距模式
+                    if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING) || IsOnOperation(CURRENT_SUB_OPERATION.RANGED))
                     {
-                        DrawRangingPoint(g, startingRangingPoint, terminalRangingPoint);
+                        DrawRangingPoint(g, RangingPoingList);
                         break;
                     }
                     //航迹跟踪模式，只显示一条船的航迹
@@ -339,13 +350,6 @@ namespace YimaWF
                         }
                     if (selectedTarget != null)
                         DrawTarget(g, selectedTarget);
-                    //自动设置雷达扫描的角度
-                    radar1.CurAngle++;
-                    if (radar1.CurAngle > 360)
-                        radar1.CurAngle = 0;
-                    radar2.CurAngle++;
-                    if (radar2.CurAngle > 360)
-                        radar2.CurAngle = 0;
                     /*
                      * 自动增加光电扫描扇形的角度，这里取消自动增加，以后都通过数据来控制当前角度
                     optRate++;
@@ -364,6 +368,8 @@ namespace YimaWF
                     {
                         drawScan(g, radar1);
                         drawScan(g, radar2);
+                        DrawCircles(g, AppConfig.RadarCirclesNum, radar1);
+                        DrawSpokes(g, AppConfig.RadarIntervalLineCount, radar1);
                     }
                     if (showOpt)
                         drawOptScan(g, optStartAngle);
@@ -433,7 +439,7 @@ namespace YimaWF
                     Rotate(t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
                     Point[] points = { A, B, C, D };
                     //无告警时显示正常图标
-                    if (t.Alarm == AlarmType.None)
+                    if (t.Alarm == AlarmType.None || t.Alarm == AlarmType.Checked)
                     {
                         //画出船的图标
                         g.FillPolygon(brush, points);
@@ -471,7 +477,7 @@ namespace YimaWF
                 if (t.ShowSignTime == 0)
                 {
                     //显示简略信息（船名、航向角、速度、到达时间）
-                    statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} m/s\n{3}", t.Name, t.Course, t.Speed, t.ArriveTime);
+                    statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts\n{3}", t.Name, t.Course, t.Speed, t.ArriveTime);
                     if (t.IsCheck)
                     {
 
@@ -497,7 +503,7 @@ namespace YimaWF
                 {
                     //显示基础信息（小标牌）——目标来源、船名、国籍、呼号、MIMSI、IMO、航向角、速度
                     statusRect = new Rectangle(B.X - 150 - 20, A.Y - 8 - 10, 140, 90);
-                    statusStr = string.Format("{0} {1} {2} {3}\nMMSI:{4}\nIMO:{5}\n{6:F2}° {7:F2} m/s",
+                    statusStr = string.Format("{0} {1} {2} {3}\nMMSI:{4}\nIMO:{5}\n{6:F2}° {7:F2} kts",
                         t.Source.ToString(), t.Name, t.Nationality, t.CallSign,
                         t.MIMSI,
                         t.IMO,
@@ -661,11 +667,74 @@ namespace YimaWF
 
         }
 
-        private void DrawRangingPoint(Graphics g, GeoPoint startingPoint, GeoPoint terminalPoint)
+        private void DrawRangingPoint(Graphics g, List<RangPoint> pointList)
         {
             var pen = new Pen(Color.Red);
             var brush = new SolidBrush(pen.Color);
-            int startingX = 0, startingY = 0;
+            int curX = 0, curY = 0;
+            List<Point> list = new List<Point>();
+            //绘制连线
+
+            foreach (var rp in pointList)
+            {
+                axYimaEnc.GetScrnPoFromGeoPo(rp.Point.x, rp.Point.y, ref curX, ref curY);
+                list.Add(new Point(curX, curY));
+            }
+            pen.Width = 3;
+            pen.DashStyle = DashStyle.Dot;
+            if (pointList.Count > 1)
+            {
+                g.DrawLines(pen, list.ToArray());
+            }
+            //绘制每个点以及距离标志
+            int count = 0;
+            string str;
+            float totalLen = 0;
+            foreach (var p in list)
+            {
+                //点
+                Rectangle rect = new Rectangle(p.X - 6, p.Y - 6, 12, 12);
+                g.FillEllipse(brush, rect);
+                //标志
+                float len = (float)RangingPoingList[count].LenToLastPoing / 1000 / 1000;
+                if (count >= 1)
+                    str = string.Format("{0:F2} km", len);
+                else
+                    str = "起点";
+                if(IsOnOperation(CURRENT_SUB_OPERATION.RANGED))
+                {
+                    totalLen += len;
+                    if(count == list.Count - 1)
+                    {
+                        str = string.Format("{0:F2} km\n总长 {1:F2} km", len, totalLen);
+                    }
+                }
+                SizeF size = g.MeasureString(str, AppConfig.RangFont);
+                RectangleF strRect = new RectangleF(p.X + 20, p.Y + 4, size.Width, size.Height);
+                g.FillRectangle(Brushes.White, strRect);
+                //strRect.X += 10;
+                g.DrawString(str, AppConfig.RangFont, Brushes.Black, strRect);
+                count++;
+            }
+            //绘制鼠标当前位置的距离
+            if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING) && RangingPoingList.Count > 0)
+            {
+                Point p = Cursor.Position;
+                //貌似从屏幕坐标转换到经纬度再计算距离时会有误差，暂时先调整当前鼠标坐标来消除误差
+                p.X -= 8;
+                p.Y -= 29;
+                axYimaEnc.GetGeoPoFromScrnPo(p.X, p.Y, ref curX, ref curY);
+                int lenmm = GetGeoLenFromGeoPoint(RangingPoingList.Last().Point, new GeoPoint(curX, curY));
+                float lenkm = (float)lenmm / 1000 / 1000;
+                str = string.Format("{0:F2} km", lenkm);
+                SizeF size = g.MeasureString(str, AppConfig.RangFont);
+                RectangleF strRect = new RectangleF(p.X + 20, p.Y + 4, size.Width, size.Height);
+                g.FillRectangle(Brushes.White, strRect);
+                //strRect.X += 10;
+                g.DrawString(str, AppConfig.RangFont, Brushes.Black, strRect);
+            }
+
+            /*int startingX = 0, startingY = 0;
             int terminalX = 0, terminalY = 0;
             if (startingPoint == null)
                 return;
@@ -677,7 +746,7 @@ namespace YimaWF
             axYimaEnc.GetScrnPoFromGeoPo(terminalPoint.x, terminalPoint.y, ref terminalX, ref terminalY);
             rect = new Rectangle(terminalX - 6, terminalY - 6, 12, 12);
             g.FillEllipse(brush, rect);
-            g.DrawLine(pen, startingX, startingY, terminalX, terminalY);
+            g.DrawLine(pen, startingX, startingY, terminalX, terminalY);*/
         }
 
         private void Rotate(float heading, ref Point A, ref Point B, ref Point C, ref Point D, Point O)
@@ -734,6 +803,13 @@ namespace YimaWF
             CurScale.Text = string.Format("1:{0}", axYimaEnc.GetCurrentScale());
         }
 
+        private void RefreshRadarRadius()
+        {
+            radar1.Radius = axYimaEnc.GetScrnLenFromGeoLen(radar1.GeoRadius);
+            radar2.Radius = axYimaEnc.GetScrnLenFromGeoLen(radar2.GeoRadius);
+            optRadius = axYimaEnc.GetScrnLenFromGeoLen(optGeoRadius);
+        }
+
         #region 鼠标事件
         protected override void OnMouseWheel(MouseEventArgs e)
         {
@@ -753,11 +829,9 @@ namespace YimaWF
                     axYimaEnc.SetCurrentScale(axYimaEnc.GetCurrentScale() * (float)1.5);
                 }
                 RefreshScaleStatusBar();
-                //radius = axYimaEnc.GetScrnLenFromGeoLen(geoRadius);
-                //更新雷达半径的长度
-                radar1.Radius = axYimaEnc.GetScrnLenFromGeoLen(radar1.GeoRadius);
-                radar2.Radius = axYimaEnc.GetScrnLenFromGeoLen(radar2.GeoRadius);
-                optRadius = axYimaEnc.GetScrnLenFromGeoLen(optGeoRadius);
+            //radius = axYimaEnc.GetScrnLenFromGeoLen(geoRadius);
+            //更新雷达半径的长度
+                RefreshRadarRadius();
                 Invalidate();
          //   }
         }
@@ -768,12 +842,11 @@ namespace YimaWF
             int geoPoX = 0, geoPoY = 0;
             if (e.Button == MouseButtons.Left)
             {
-                if (IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) || IsOnOperation(CURRENT_SUB_OPERATION.SHOWING_TRACK)
-                    || IsOnOperation(CURRENT_SUB_OPERATION.PLAYBACK))
+                if (IsOnOperation(CURRENT_SUB_OPERATION.HAND_ROAM))
                 {
-                    //SetOperation(CURRENT_SUB_OPERATION.HAND_ROAM);
-                    //m_bHasPressedDragStartPo = true;
-                    //m_mouseDragFirstPo = new Point(e.Location.X, e.Location.Y);
+                    SetOperation(CURRENT_SUB_OPERATION.ROAMING);
+                    m_bHasPressedDragStartPo = true;
+                    m_mouseDragFirstPo = new Point(e.Location.X, e.Location.Y);
                 }
                 else if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
                 {
@@ -793,7 +866,20 @@ namespace YimaWF
                 else if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
                 {
                     axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
-                    if (startingRangingPoint == null)
+                    RangPoint p = new RangPoint();
+                    p.Point = new GeoPoint(geoPoX, geoPoY);
+                    if (RangingPoingList.Count == 0)
+                    {
+                        p.LenToLastPoing = 0;
+                    }
+                    else
+                    {
+                        p.LenToLastPoing = GetGeoLenFromGeoPoint(RangingPoingList.Last().Point, p.Point);
+                    }
+                    if(RangingPoingList.Count == 0 || p.LenToLastPoing != 0)
+                        RangingPoingList.Add(p);
+                    //旧测距代码
+                    /*if (startingRangingPoint == null)
                     {
                         startingRangingPoint = new GeoPoint(geoPoX, geoPoY);
                         Invalidate();
@@ -813,7 +899,7 @@ namespace YimaWF
                         int geoLen = Convert.ToInt32(axYimaEnc.GetGeoLenFromScrnLen(scanLen));
                         ShowRangingResult?.Invoke(geoLen);
                         EndRanging();
-                    }
+                    }*/
                 }
             }
         }
@@ -827,12 +913,15 @@ namespace YimaWF
             CurClientPoint.Text = String.Format("X:{0} Y:{1}", e.X, e.Y);
             int geoX = 0, geoY = 0;
             axYimaEnc.GetGeoPoFromScrnPo(e.X, e.Y, ref geoX, ref geoY);
-            CurGeoPoint.Text = String.Format("X:{0} Y:{1}", geoX, geoY);
+            int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
+            string strX = GetDegreeStringFromGeoCoor(true, geoX, iGeoCoorMultiFactor);
+            string strY = GetDegreeStringFromGeoCoor(false, geoY, iGeoCoorMultiFactor);
+            CurGeoPoint.Text = String.Format("{0} {1}", strX, strY);
             
             
 
 
-            if (IsOnOperation(CURRENT_SUB_OPERATION.HAND_ROAM))
+            if (IsOnOperation(CURRENT_SUB_OPERATION.ROAMING))
             {
                 if (m_bHasPressedDragStartPo)
                 {
@@ -871,7 +960,7 @@ namespace YimaWF
                     t.ShowSignTime = MaxShowTargetTime;
                     isInvalidate = true;
                 }
-                if (IsOnOperation(CURRENT_SUB_OPERATION.HAND_ROAM))
+                if (IsOnOperation(CURRENT_SUB_OPERATION.ROAMING))
                 {
                     if (m_bHasPressedDragStartPo)
                     {
@@ -881,7 +970,7 @@ namespace YimaWF
                         isInvalidate = true;
                     }
                     //SetOperation(CURRENT_SUB_OPERATION.NO_OPERATION);
-                    ClearOperation(CURRENT_SUB_OPERATION.HAND_ROAM);
+                    ClearOperation(CURRENT_SUB_OPERATION.ROAMING);
                 }
             }
             //鼠标右键
@@ -917,6 +1006,19 @@ namespace YimaWF
             if (isInvalidate)
                 Invalidate();
 
+        }
+
+        protected override void OnMouseDoubleClick(MouseEventArgs e)
+        {
+            base.OnMouseDoubleClick(e);
+            if(e.Button == MouseButtons.Left)
+            {
+                if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
+                {
+                    SetOperation(CURRENT_SUB_OPERATION.RANGED);
+                    ClearOperation(CURRENT_SUB_OPERATION.RANGING);
+                }
+            }
         }
         #endregion
 
@@ -991,17 +1093,20 @@ namespace YimaWF
             if (CurSelectedTarget != null)
                 if(CurSelectedTarget.ShowSignTime > 0)
                     CurSelectedTarget.ShowSignTime--;
-            if(IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) || IsOnOperation(CURRENT_SUB_OPERATION.SHOWING_TRACK)
-                || IsOnOperation(CURRENT_SUB_OPERATION.PLAYBACK))
+            //自动设置雷达扫描的角度
+            radar1.CurAngle++;
+            if (radar1.CurAngle > 360)
+                radar1.CurAngle = 0;
+            radar2.CurAngle++;
+            if (radar2.CurAngle > 360)
+                radar2.CurAngle = 0;
+            if (IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) || IsOnOperation(CURRENT_SUB_OPERATION.SHOWING_TRACK)
+                || IsOnOperation(CURRENT_SUB_OPERATION.PLAYBACK) || !IsOnOperation(CURRENT_SUB_OPERATION.ROAMING))
                 Invalidate();
             //TargetDataTimer.Enabled = false;
         }
 
-        private void ShowDetail_Click(object sender, EventArgs e)
-        {
-            if(CurSelectedTarget != null)
-                ShowTargetDetail?.Invoke(CurSelectedTarget);
-        }
+
         #region 雷达绘图函数
         private int optRate = 0;
         private void RadarTimer_Tick(object sender, EventArgs e)
@@ -1110,6 +1215,83 @@ namespace YimaWF
             //g.DrawLine(pScanPen, center, point1);
             //g.DrawLine(pScanPen, center, point2);
             g.DrawLine(Pens.White, center, point3);
+        }
+        //绘制雷达同心圆
+        private void DrawCircles(Graphics g, int count, Radar radar)
+        {
+            // 圆的直径等于绘图区域最短边  
+            float diameter = radar.Radius * 2;
+            // 半径  
+            // 圆心  
+            int curX = 0, curY = 0;
+            axYimaEnc.GetScrnPoFromGeoPo(platformGeoPo.x, platformGeoPo.y, ref curX, ref curY);
+            Point center = new Point(curX, curY);
+
+            // 画几个圆，先试试5个  
+            //int count = 5;
+            float diameterStep = diameter / count;
+            float radiusStep = radar.Radius / count;
+
+            // 生成圆的范围  
+            RectangleF cirleRect = new RectangleF();
+            cirleRect.X = center.X - radar.Radius;
+            cirleRect.Y = center.Y - radar.Radius;
+            cirleRect.Width = cirleRect.Height = diameter;
+
+            // 画同心圆  
+            for (int i = 0; i < count; i++)
+            {
+                g.DrawEllipse(AppConfig.RadarPen, cirleRect);
+                //g.FillEllipse(bBackSolidBrush, cirleRect);//填充绿色
+
+                cirleRect.X += radiusStep;
+                cirleRect.Y += radiusStep;
+                cirleRect.Width -= diameterStep;
+                cirleRect.Height -= diameterStep;
+            }
+        }
+        //绘制雷达的辐射线
+        private void DrawSpokes(Graphics g, int count, Radar radar)
+        {
+            int curX = 0, curY = 0;
+            axYimaEnc.GetScrnPoFromGeoPo(platformGeoPo.x, platformGeoPo.y, ref curX, ref curY);
+            Point center = new Point(curX, curY);
+
+            if (count > 0)
+            {
+                // 计算角度  
+                float angle = 0;
+                float angleStep = (float)360 / count;
+                PointF endPoint = new PointF();
+
+                for (int i = 0; i < count; i++)
+                {
+                    // 得到终点  
+                    // endPoint = getPoint(angle);
+                    endPoint = getMappedPoint(angle, max, curX, curY, radar.Radius);
+                    g.DrawLine(AppConfig.RadarPen, center, endPoint);
+
+                    // 画角度值  
+                    //g.DrawString(angle.ToString("0") + "°", this.Font, Brushes.Gray, endPoint);
+                    // 把要画的字符串提出来便于操作  
+                    string angleString = angle.ToString("0") + "°";
+
+                    // 画角度值，如果文字在90-270度区间内，  
+                    PointF textPoint = endPoint;
+
+                    if (angle == 270)
+                        textPoint.Y -= TextRenderer.MeasureText(angleString, this.Font).Height; // 用TextRenderer测量字符串大小  
+                    else if (angle < 270 && angle > 90)
+                        textPoint.X -= TextRenderer.MeasureText(angleString, this.Font).Width;
+                    else
+                        textPoint.X += 8; // 随便来点漂移  
+
+                    g.DrawString(angleString, this.Font, Brushes.Gray, textPoint);
+
+                    angle += angleStep;
+                    angle %= 360;
+                }
+            }
         }
         #endregion
 
@@ -1260,6 +1442,40 @@ namespace YimaWF
         }
         #endregion
 
+        #region 目标右键菜单响应函数
+        private void ShowDetail_Click(object sender, EventArgs e)
+        {
+            if (CurSelectedTarget != null)
+                ShowTargetDetail?.Invoke(CurSelectedTarget);
+        }
+
+        private void OptLinkageToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if(CurSelectedTarget != null)
+                TargetOptLinkage?.Invoke(CurSelectedTarget);
+        }
+
+        private void TargetCenterToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+           if(CurSelectedTarget != null)
+            {
+                TargetCenter(CurSelectedTarget);
+            }
+        }
+
+        private void AutoTrackToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (CurSelectedTarget != null)
+                AutoTrackTarget?.Invoke(CurSelectedTarget);
+        }
+
+        private void ManualTrackToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (CurSelectedTarget != null)
+                ManualTrackTarget?.Invoke(CurSelectedTarget);
+        }
+        #endregion
+
         #endregion
 
         #region 航迹查询
@@ -1344,12 +1560,11 @@ namespace YimaWF
         }
         #endregion
 
-        private void OptLinkageToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            TargetOptLinkage?.Invoke(null);
-        }
+
 
         #region 海图操作接口
+
+        #region 基本操作接口
         public void SetDisplayCategory(DISPLAY_CATEGORY_NUM displayType)
         {
             axYimaEnc.SetDisplayCategory((short)displayType);
@@ -1370,6 +1585,12 @@ namespace YimaWF
         public void CenterMap()
         {
             axYimaEnc.CenterMap(platformGeoPo.x, platformGeoPo.y);
+        }
+
+        public void TargetCenter(Target t)
+        {
+            GeoPoint p = t.Track.Last().Point;
+            axYimaEnc.CenterMap(p.x, p.y);
         }
         public void MoveMap(MovingDirection direction)
         {
@@ -1425,6 +1646,51 @@ namespace YimaWF
                 }
             Invalidate();
         }
+
+        public void SetScale(float scale)
+        {
+            axYimaEnc.SetCurrentScale(scale);
+            RefreshScaleStatusBar();
+            RefreshRadarRadius();
+            Invalidate();
+        }
+
+        public void ZoomOut()
+        {
+            axYimaEnc.SetCurrentScale(axYimaEnc.GetCurrentScale() * (float)1.5);
+            RefreshScaleStatusBar();
+            RefreshRadarRadius();
+            Invalidate();
+        }
+
+        public void ZoomIn()
+        {
+            axYimaEnc.SetCurrentScale(axYimaEnc.GetCurrentScale() / (float)1.5);
+            RefreshScaleStatusBar();
+            RefreshRadarRadius();
+            Invalidate();
+        }
+
+        public void StartHandRoam()
+        {
+            if(IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION))
+                SetOperation(CURRENT_SUB_OPERATION.HAND_ROAM);
+        }
+        
+        public void EndHandRoam()
+        {
+            if (IsOnOperation(CURRENT_SUB_OPERATION.HAND_ROAM))
+                ClearOperation(CURRENT_SUB_OPERATION.HAND_ROAM);
+        }
+
+        public void CheckAlarm(Target t)
+        {
+            if(t.Alarm != AlarmType.None)
+            {
+                t.Alarm = AlarmType.Checked;
+            }
+        }
+        #endregion
 
         #region 圆形保护区操作
         public bool AddProtectZone(ProtectZone pz)
@@ -1760,11 +2026,13 @@ namespace YimaWF
 
         public void EndRanging()
         {
-            if (IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
+            if (IsOnOperation(CURRENT_SUB_OPERATION.RANGING) || IsOnOperation(CURRENT_SUB_OPERATION.RANGED))
             {
-                startingRangingPoint = null;
-                terminalRangingPoint = null;
-                ClearOperation(CURRENT_SUB_OPERATION.RANGING);
+                RangingPoingList.Clear();
+                if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
+                    ClearOperation(CURRENT_SUB_OPERATION.RANGING);
+                if(IsOnOperation(CURRENT_SUB_OPERATION.RANGED))
+                    ClearOperation(CURRENT_SUB_OPERATION.RANGED);
                 Invalidate();
             }
         }
@@ -2039,7 +2307,7 @@ namespace YimaWF
         #endregion
 
         #region 融合目标操作
-        public bool AddMergetTarget(Target t, double longitude, double latitude)
+        public bool AddMergeTarget(Target t, double longitude, double latitude)
         {
             Target tmp;
             if (MergeTargetDic.TryGetValue(t.ID, out tmp))
@@ -2247,16 +2515,8 @@ namespace YimaWF
             int i = 0;
             foreach(Target tmp in list)
             {
-                if(tmp.Source == t.Source && tmp.ID == t.ID)
+                if(t.Equals(tmp))
                 {
-                    if(t.Source == TargetSource.Radar)
-                    {
-                        if (t.RadarID != tmp.RadarID)
-                        {
-                            i++;
-                            continue;
-                        }
-                    }
                     list.RemoveAt(i);
                     break;
                 }
@@ -2269,16 +2529,8 @@ namespace YimaWF
             int pos = 0;
             foreach(var tmp in list)
             {
-                if(t.Source == tmp.Source && t.ID == tmp.ID)
+                if(t.Equals(tmp))
                 {
-                    if(tmp.Source == TargetSource.Radar)
-                    {
-                        if(tmp.RadarID != t.RadarID)
-                        {
-                            pos++;
-                            continue;
-                        }
-                    }
                     return pos;
                 }
                 pos++;
@@ -2306,6 +2558,20 @@ namespace YimaWF
             }
             t.Alarm = alarm;
             t.AlarmID = alarmID;
+        }
+
+        private int GetGeoLenFromGeoPoint(GeoPoint start, GeoPoint end)
+        {
+            int len = -1;
+            int startingX = 0, startingY = 0;
+            int terminalX = 0, terminalY = 0;
+            axYimaEnc.GetScrnPoFromGeoPo(start.x, start.y, ref startingX, ref startingY);
+            axYimaEnc.GetScrnPoFromGeoPo(end.x, end.y, ref terminalX, ref terminalY);
+            int x = Math.Abs(terminalX - startingX);
+            int y = Math.Abs(terminalY - startingY);
+            int scanLen = Convert.ToInt32(Math.Sqrt(x * x + y * y));
+            len = Convert.ToInt32(axYimaEnc.GetGeoLenFromScrnLen(scanLen));
+            return len;
         }
     }
 }

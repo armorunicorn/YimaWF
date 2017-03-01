@@ -19,7 +19,8 @@ namespace YimaWF.data
         None, //无告警
         ProtectZone, //圆形保护区告警
         ForbiddenZone, //多边形保护区告警
-        Pipeline //管道告警
+        Pipeline, //管道告警
+        Checked  //已确认（不再显示）
     }
 
     public enum TargetType
@@ -88,6 +89,22 @@ namespace YimaWF.data
             ID = id;
             Course = course;
             Speed = speed;
+        }
+
+        public bool Equals(Target t)
+        {
+            if (this.Source == t.Source && this.ID == t.ID)
+            {
+                if (t.Source == TargetSource.Radar)
+                {
+                    if (this.RadarID != t.RadarID)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return false;
         }
     }
 }
