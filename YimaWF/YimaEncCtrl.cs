@@ -84,6 +84,10 @@ namespace YimaWF
         //private GeoPoint startingRangingPoint;
         //private GeoPoint terminalRangingPoint;
         private List<RangPoint> RangingPoingList = new List<RangPoint>();
+
+        //区域放大使用的内部全局变量
+        private Point areaZoomStartPo = Point.Empty;
+        //private Point areaZoomEndPo = Point.Empty;
         //大比例尺下管道最大宽度
         //private readonly int largeScalePipelineMaxWidth = 10;
         //小比例尺下管道最大宽度
@@ -373,6 +377,10 @@ namespace YimaWF
                     }
                     if (showOpt)
                         drawOptScan(g, optStartAngle);
+                    if(IsOnOperation(CURRENT_SUB_OPERATION.AREA_ZOOM))
+                    {
+                        DrawAreaZoomRect(g);
+                    }
                 }
                 catch
                 {
@@ -719,10 +727,7 @@ namespace YimaWF
             //绘制鼠标当前位置的距离
             if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING) && RangingPoingList.Count > 0)
             {
-                Point p = Cursor.Position;
-                //貌似从屏幕坐标转换到经纬度再计算距离时会有误差，暂时先调整当前鼠标坐标来消除误差
-                p.X -= 8;
-                p.Y -= 29;
+                Point p = GetCursorPoint();
                 axYimaEnc.GetGeoPoFromScrnPo(p.X, p.Y, ref curX, ref curY);
                 int lenmm = GetGeoLenFromGeoPoint(RangingPoingList.Last().Point, new GeoPoint(curX, curY));
                 float lenkm = (float)lenmm / 1000 / 1000;
@@ -747,6 +752,18 @@ namespace YimaWF
             rect = new Rectangle(terminalX - 6, terminalY - 6, 12, 12);
             g.FillEllipse(brush, rect);
             g.DrawLine(pen, startingX, startingY, terminalX, terminalY);*/
+        }
+
+        private void DrawAreaZoomRect(Graphics g)
+        {
+            if(areaZoomStartPo != Point.Empty)
+            {
+                var p = new Pen(Color.Red);
+                p.Width = 2;
+                Point areaZoomEndPo = GetCursorPoint();
+                Rectangle rect = GetRectFromPoint(areaZoomStartPo, areaZoomEndPo);
+                g.DrawRectangle(p, rect);
+            }
         }
 
         private void Rotate(float heading, ref Point A, ref Point B, ref Point C, ref Point D, Point O)
@@ -901,6 +918,10 @@ namespace YimaWF
                         EndRanging();
                     }*/
                 }
+                else if(IsOnOperation(CURRENT_SUB_OPERATION.AREA_ZOOM))
+                {
+                    areaZoomStartPo = e.Location;
+                }
             }
         }
 
@@ -971,6 +992,23 @@ namespace YimaWF
                     }
                     //SetOperation(CURRENT_SUB_OPERATION.NO_OPERATION);
                     ClearOperation(CURRENT_SUB_OPERATION.ROAMING);
+                }
+                else if(IsOnOperation(CURRENT_SUB_OPERATION.AREA_ZOOM))
+                {
+                    Point p = GetCursorPoint();
+                    Rectangle rect = GetRectFromPoint(areaZoomStartPo, p);
+                    float proportion = (axYimaEnc.GetGeoLenFromScrnLen(rect.Width) / axYimaEnc.Width) 
+                        / (axYimaEnc.GetGeoLenFromScrnLen(axYimaEnc.Width) / axYimaEnc.Width);
+                    int x = 0, y = 0;
+                    axYimaEnc.GetGeoPoFromScrnPo(rect.X + rect.Width / 2, rect.Y + rect.Height / 2, ref x, ref y);
+                    axYimaEnc.SetCurrentScale(proportion * axYimaEnc.GetCurrentScale());
+                    RefreshScaleStatusBar();
+                    RefreshRadarRadius();
+                    //int x = rect.X + Width / 2, y = rect.Y + Height / 2;
+                    
+                    axYimaEnc.CenterMap(x, y);
+                    areaZoomStartPo = Point.Empty;
+                    
                 }
             }
             //鼠标右键
@@ -1690,6 +1728,22 @@ namespace YimaWF
                 t.Alarm = AlarmType.Checked;
             }
         }
+
+        public void StartAreaZoom()
+        {
+            if(IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION))
+            {
+                SetOperation(CURRENT_SUB_OPERATION.AREA_ZOOM);
+            }
+        }
+        public void EndAreaZoom()
+        {
+            if(IsOnOperation(CURRENT_SUB_OPERATION.AREA_ZOOM))
+            {
+                ClearOperation(CURRENT_SUB_OPERATION.AREA_ZOOM);
+                areaZoomStartPo = Point.Empty;
+            }
+        }
         #endregion
 
         #region 圆形保护区操作
@@ -2402,6 +2456,7 @@ namespace YimaWF
         #endregion
 
         #endregion
+        //私有工具函数
         //通过ID获取radar结构体
         private Radar GetRadar(int ID)
         {
@@ -2572,6 +2627,42 @@ namespace YimaWF
             int scanLen = Convert.ToInt32(Math.Sqrt(x * x + y * y));
             len = Convert.ToInt32(axYimaEnc.GetGeoLenFromScrnLen(scanLen));
             return len;
+        }
+
+        private Rectangle GetRectFromPoint(Point p1, Point p2)
+        {
+            int x = 0, y = 0, width = 0, height = 0;
+
+            if (p1.X > p2.X)
+            {
+                x = p2.X;
+                width = p1.X - p2.X;
+            }
+            else
+            {
+                x = p1.X;
+                width = p2.X - p1.X;
+            }
+            if (p1.Y > p2.Y)
+            {
+                y = p2.Y;
+                height = p1.Y - p2.Y;
+            }
+            else
+            {
+                y = p1.Y;
+                height = p2.Y - p1.Y;
+            }
+            return new Rectangle(x, y, width, height);
+        }
+
+        private Point GetCursorPoint()
+        {
+            //鼠标当前位置会有偏差（状态栏导致？），需要修正
+            Point p = Cursor.Position;
+            p.X -= 8;
+            p.Y -= 29;
+            return p;
         }
     }
 }

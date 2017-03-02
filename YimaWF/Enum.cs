@@ -7,7 +7,7 @@
         ADD_PIPELINE = 0x2,
         RANGING = 0x4,
         RANGED = 0x10,
-        ADD_WAYPOINT = 0x20,
+        AREA_ZOOM = 0x20,
         ADD_ROUTE = 0x40,
         EDITING_ROUTE = 0x80,
         EDITING_WAY_POINT = 0x100,
