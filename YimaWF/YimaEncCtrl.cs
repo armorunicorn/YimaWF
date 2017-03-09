@@ -158,9 +158,9 @@ namespace YimaWF
         #endregion
 
         #region 数据回放
-        public Dictionary<int, Target> AISTargetPlaybackDic = new Dictionary<int, Target>();
-        public Dictionary<int, Target> RadarTargetPlaybackDic = new Dictionary<int, Target>();
-        public Dictionary<int, Target> MergeTargetPlaybackDic = new Dictionary<int, Target>();
+        //public Dictionary<int, Target> AISTargetPlaybackDic = new Dictionary<int, Target>();
+        //public Dictionary<int, Target> RadarTargetPlaybackDic = new Dictionary<int, Target>();
+        //public Dictionary<int, Target> MergeTargetPlaybackDic = new Dictionary<int, Target>();
         #endregion
 
         public YimaEncCtrl()
@@ -309,14 +309,14 @@ namespace YimaWF
                         break;
                     }
                     //数据回放模式，现在只显示ais回放
-                    if (IsOnOperation(CURRENT_SUB_OPERATION.PLAYBACK))
+                    /*if (IsOnOperation(CURRENT_SUB_OPERATION.PLAYBACK))
                     {
                         foreach (var t in AISTargetPlaybackDic.Values)
                         {
                             DrawTarget(g, t);
                         }
                         break;
-                    }
+                    }*/
                     //以上模式都不会绘制当前目标，只有当不在以上模式的时候，才开始绘制当前目标
                     Target selectedTarget = null;
                     if (showAISTarget)
@@ -1583,7 +1583,7 @@ namespace YimaWF
         #endregion
 
         #region 数据回放
-        public void StartPlayback()
+        /*public void StartPlayback()
         {
             SetOperation(CURRENT_SUB_OPERATION.PLAYBACK);
             Invalidate();
@@ -1595,7 +1595,7 @@ namespace YimaWF
             AISTargetPlaybackDic.Clear();
             MergeTargetPlaybackDic.Clear();
             RadarTargetPlaybackDic.Clear();
-        }
+        }*/
         #endregion
 
 
@@ -1743,6 +1743,17 @@ namespace YimaWF
                 ClearOperation(CURRENT_SUB_OPERATION.AREA_ZOOM);
                 areaZoomStartPo = Point.Empty;
             }
+        }
+
+        public void AddPointToTargetTrack(Target t, string time, float course, double longitude, double latitude)
+        {
+            GeoPoint gp = GetGeoPoint(longitude, latitude);
+            if (gp == null)
+                return;
+            TrackPoint tp = new TrackPoint(gp);
+            tp.Course = course;
+            tp.Time = time;
+            t.Track.Add(tp);
         }
         #endregion
 
@@ -2516,17 +2527,6 @@ namespace YimaWF
             }
 
             return retDegreeString;
-        }
-
-        private void AddPointToTargetTrack(Target t,string time, float course, double longitude, double latitude)
-        {
-            GeoPoint gp = GetGeoPoint(longitude, latitude);
-            if (gp == null)
-                return;
-            TrackPoint tp = new TrackPoint(gp);
-            tp.Course = course;
-            tp.Time = time;
-            t.Track.Add(tp);
         }
 
         private GeoPoint GetGeoPoint(double longitude, double latitude)
