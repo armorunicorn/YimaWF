@@ -20,5 +20,9 @@ namespace YimaWF.data
         public Pen RadarPen;
         public int RadarCirclesNum = 0;
         public int RadarIntervalLineCount = 0;
+        public bool ShowTargetName = true;
+        public bool ShowTargetSpeed = true;
+        public bool ShowTargetCourse = true;
+        public bool ShowTargetArriveTime = true;
     }
 }

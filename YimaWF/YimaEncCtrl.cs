@@ -430,7 +430,8 @@ namespace YimaWF
                     Point[] points = { A, B, C };
                     //画出船的图标
                     g.FillPolygon(brush, points);
-                    g.DrawLine(pen, A, D);
+                    if(t.ShowSpeedLine)
+                        g.DrawLine(pen, A, D);
                 }
                 else if (t.Source == TargetSource.Merge)
                 {
@@ -479,16 +480,27 @@ namespace YimaWF
 
 
                 //画出船的状态
-                string statusStr;
+                string statusStr = "";
                 Brush statusBrush;
-                Rectangle statusRect;
+                RectangleF statusRect;
+                SizeF size;
                 if (t.ShowSignTime == 0)
                 {
                     //显示简略信息（船名、航向角、速度、到达时间）
-                    statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts\n{3}", t.Name, t.Course, t.Speed, t.ArriveTime);
+                    //statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts\n{3}", t.Name, t.Course, t.Speed, t.ArriveTime);
+                    //根据配置显示信息
+                    if (AppConfig.ShowTargetName)
+                    {
+                        statusStr += string.Format("{0}\n", t.Name);
+                    }
+                    if(AppConfig.ShowTargetCourse)
+                        statusStr += string.Format("{0:F2}°\n", t.Course);
+                    if (AppConfig.ShowTargetSpeed)
+                        statusStr += string.Format("{0:F2} kts\n", t.Speed);
+                    if (AppConfig.ShowTargetArriveTime)
+                        statusStr += string.Format("{0}\n", t.ArriveTime);
                     if (t.IsCheck)
                     {
-
                         statusBrush = Brushes.Green;
                     }
                     else
@@ -496,26 +508,27 @@ namespace YimaWF
                         //statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts", t.CallSign, 360 - t.Heading, t.Speed);
                         statusBrush = Brushes.Black;
                     }
-
+                    size = g.MeasureString(statusStr, AppConfig.TargetStatusFont);
                     if (t.Source == TargetSource.Merge)
                     {
-                        statusRect = new Rectangle(B.X + TargetRectFactor, B.Y, 90, 60);
+                        statusRect = new RectangleF(B.X + TargetRectFactor, B.Y, size.Width, size.Height);
                     }
                     else
                     {
-                        statusRect = new Rectangle(B.X - 90, A.Y - 8 - 10, 90, 60);
+                        statusRect = new RectangleF(B.X - size.Width, A.Y - 8 - 10, size.Width, size.Height);
                     }
                     g.DrawString(statusStr, AppConfig.TargetStatusFont, statusBrush, statusRect);
                 }
                 else
                 {
                     //显示基础信息（小标牌）——目标来源、船名、国籍、呼号、MIMSI、IMO、航向角、速度
-                    statusRect = new Rectangle(B.X - 150 - 20, A.Y - 8 - 10, 140, 90);
                     statusStr = string.Format("{0} {1} {2} {3}\nMMSI:{4}\nIMO:{5}\n{6:F2}° {7:F2} kts",
                         t.Source.ToString(), t.Name, t.Nationality, t.CallSign,
                         t.MIMSI,
                         t.IMO,
                         t.Course, t.Speed);
+                    size = g.MeasureString(statusStr, AppConfig.TargetStatusFont);
+                    statusRect = new RectangleF(B.X - size.Width - 20, A.Y - 8 - 10, size.Width, size.Height);
                     statusBrush = new SolidBrush(Color.FromArgb(255, Color.BurlyWood));
                     g.FillRectangle(statusBrush, statusRect);
                     g.DrawString(statusStr, AppConfig.TargetStatusFont, Brushes.Black, statusRect);
@@ -1387,7 +1400,7 @@ namespace YimaWF
 
         #region 菜单相应函数
 
-        #region 雷达光电右键菜单
+        #region 海图区域右键菜单
         private void ShowRadarTargetItem_Click(object sender, EventArgs e)
         {
             ShowRadarTargetItem.Checked = !ShowRadarTargetItem.Checked;
@@ -1433,6 +1446,11 @@ namespace YimaWF
         {
             ShowAllTrackToolStripMenuItem.Checked = !ShowAllTrackToolStripMenuItem.Checked;
             SetShowTrackOrNot(ShowAllTrackToolStripMenuItem.Checked);
+        }
+        private void ShowSpeedLineToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ShowSpeedLineToolStripMenuItem.Checked = !ShowSpeedLineToolStripMenuItem.Checked;
+            SetShowTargetSpeedLineOrNot(ShowSpeedLineToolStripMenuItem.Checked);
         }
         #endregion
         #region 多边形区域绘制右键菜单
@@ -1682,6 +1700,15 @@ namespace YimaWF
                 {
                     t.ShowTrack = showTrack;
                 }
+            Invalidate();
+        }
+
+        public void SetShowTargetSpeedLineOrNot(bool isShow)
+        {
+            foreach(var t in AISTargetDic.Values.ToList())
+            {
+                t.ShowSpeedLine = isShow;
+            }
             Invalidate();
         }
 
@@ -2664,5 +2691,7 @@ namespace YimaWF
             p.Y -= 29;
             return p;
         }
+
+
     }
 }

@@ -47,11 +47,36 @@ namespace YimaWF.data
         public short ShowSignTime = 0;
         public bool IsApproach = false;
         public bool ShowTrack = true;
+
+        private string name;
+        public string Name
+        {
+            get
+            {
+                if (Source == TargetSource.Radar)
+                {
+                    return RadarID + "-" + ID;
+                }
+                else
+                {
+                    if (name != null)
+                        return name;
+                    else
+                        return ID.ToString();
+                }
+            }
+            set
+            {
+                name = value;
+            }
+        }
+
         #region 雷达数据
         public int RadarID = 0;
         #endregion
 
         #region AIS数据
+        public bool ShowSpeedLine = true;
         public int IMO;
         public string MIMSI;
         public string CallSign;
@@ -59,7 +84,7 @@ namespace YimaWF.data
         public string Nationality;
         //public string Date;
         public string UpdateTime;
-        public string Name = "未知";
+        
         public string ArriveTime;
         //航行状态
         public byte SailStatus;
