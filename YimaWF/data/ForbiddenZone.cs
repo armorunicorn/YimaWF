@@ -14,5 +14,9 @@ namespace YimaWF.data
         public int ID;
 
         public string Name;
+
+        public int AlarmLevel = 200;
+
+        public string Remark = "";
     }
 }

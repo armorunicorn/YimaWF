@@ -11,7 +11,7 @@ namespace YimaWF.data
     {
         public GeoPoint Point;
         public string Time;
-        public float Course;
+        public double Course;
 
         public TrackPoint(GeoPoint p)
         {

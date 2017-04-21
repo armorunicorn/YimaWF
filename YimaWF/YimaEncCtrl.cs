@@ -68,7 +68,7 @@ namespace YimaWF
 
         public Config AppConfig;
 
-        public Target CurSelectedTarget;
+        public Target CurSelectedTarget { set; get; }
 
         public Target CurShowingTrackTarget;
 
@@ -805,7 +805,7 @@ namespace YimaWF
             }
         }
 
-        private void Rotate(float heading, ref Point A, ref Point B, ref Point C, ref Point D, Point O)
+        private void Rotate(double heading, ref Point A, ref Point B, ref Point C, ref Point D, Point O)
         {
             double angle = (double)(heading  * Math.PI / 180);
             double newX = (A.X - O.X) * Math.Cos(angle) + (A.Y - O.Y) * Math.Sin(angle) + O.X;
@@ -996,6 +996,7 @@ namespace YimaWF
                     CurSelectedTarget = t;
                     t.IsSelected = true;
                     t.ShowSignTime = MaxShowTargetTime;
+                    TargetSelect?.Invoke(t);
                     isInvalidate = true;
                 }
                 if (IsOnOperation(CURRENT_SUB_OPERATION.ROAMING))
@@ -1049,7 +1050,7 @@ namespace YimaWF
                         isInvalidate = true;
                         ShowTrackMenuItem.Checked = t.ShowTrack;
                         targetContextMenu.Show(axYimaEnc, e.Location);
-
+                        TargetSelect?.Invoke(t);
                     }
                     else
                     {
@@ -1222,6 +1223,11 @@ namespace YimaWF
 
         private PointF getMappedPoint(float angle, float value, int x, int y, float scanRadius)
         {
+            angle = angle - 90;
+            if(angle < 0)
+            {
+                angle += 360;
+            }
             // 计算映射在坐标图中的半径  
             float r = scanRadius * (value - min) / (max - min);
             
@@ -1505,8 +1511,8 @@ namespace YimaWF
             {
                 if (AddedForbiddenZone != null)
                 {
-                    ForbiddenZone fz = EndAddForbiddenZone();
-                    AddedForbiddenZone(fz);
+                    AddedForbiddenZone(curForbiddenZone);
+                    EndAddForbiddenZone();
                 }
                 else
                 {
@@ -1517,8 +1523,8 @@ namespace YimaWF
             {
                 if (AddedPipeline != null)
                 {
-                    Pipeline pl = EndAddPipeline();
-                    AddedPipeline(pl);
+                    AddedPipeline(curPipeline);
+                    EndAddPipeline();
                 }
                 else
                 {
@@ -1629,9 +1635,9 @@ namespace YimaWF
                     C.X = curX + TargetRectFactor;
                     C.Y = curY + TargetRectFactor;
                     D.X = A.X;
-                    D.Y = A.Y - Convert.ToInt32(t.Speed * 2);
+                    D.Y = A.Y;// - Convert.ToInt32(t.Speed * 2);
                     //根据船的航向旋转三角形
-                    Rotate(t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
+                    Rotate(p.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
                     Point[] points = { A, B, C };
                     //画出船的图标
                     g.FillPolygon(brush, points);
@@ -1651,7 +1657,7 @@ namespace YimaWF
                     D.X = curX - TargetRectFactor;
                     D.Y = curY + TargetRectFactor;
                     //根据船的航向旋转图形
-                    Rotate(t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
+                    Rotate(p.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
                     Point[] points = { A, B, C, D };
                     //画出船的图标
                     g.FillPolygon(brush, points);
@@ -1687,7 +1693,6 @@ namespace YimaWF
             //Console.WriteLine("------------------------");
             if (list.Count > 1)
             {
-                Console.WriteLine("1");
                 pen.Width = 3;
                 pen.DashStyle = DashStyle.Dot;
                 g.DrawCurve(pen, list.ToArray());
@@ -1714,6 +1719,13 @@ namespace YimaWF
 
 
         #region 海图操作接口
+
+        #region 测试用接口
+        public int GetOpt()
+        {
+            return (int)m_curOperation;
+        }
+        #endregion
 
         #region 基本操作接口
         public void SetDisplayCategory(DISPLAY_CATEGORY_NUM displayType)
@@ -1872,7 +1884,7 @@ namespace YimaWF
             }
         }
 
-        public void AddPointToTargetTrack(Target t, string time, float course, double longitude, double latitude)
+        public void AddPointToTargetTrack(Target t, string time, double course, double longitude, double latitude)
         {
             GeoPoint gp = GetGeoPoint(longitude, latitude);
             if (gp == null)
@@ -1906,6 +1918,25 @@ namespace YimaWF
         public List<double> GetTargetLocation(Target t)
         {
             return GetNormalGeoFromYimaGeo(t.Track.Last().Point);
+        }
+
+        public GeoPoint GetGeoPoint(double longitude, double latitude)
+        {
+            try
+            {
+                int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
+                GeoPoint gp = new GeoPoint(Convert.ToInt32(longitude * iGeoCoorMultiFactor), Convert.ToInt32(latitude * iGeoCoorMultiFactor));
+                return gp;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public int GetGeoMultiFactor()
+        {
+            return axYimaEnc.GetGeoCoorMultiFactor();
         }
         #endregion
 
@@ -2060,17 +2091,24 @@ namespace YimaWF
             }
             else
             {
-                for(int i = MinForbiddenZoneID; i< MaxForbiddenZoneNum + 1; i++)
+                if (fz.ID == 0)
                 {
-                    ForbiddenZone tmp;
-                    if(!ForbiddenZoneMap.TryGetValue(i, out tmp))
+                    for (int i = MinForbiddenZoneID; i < MinForbiddenZoneID + MaxForbiddenZoneNum; i++)
                     {
-                        fz.ID = i;
-                        ForbiddenZoneMap.Add(i, fz);
-                        ForbiddenZoneList.Add(fz);
-                        break;
+                        ForbiddenZone tmp;
+                        if (!ForbiddenZoneMap.TryGetValue(i, out tmp))
+                        {
+                            fz.ID = i;
+                            break;
+                        }
                     }
                 }
+                else if (fz.ID < MinForbiddenZoneID || fz.ID > MinForbiddenZoneID + MaxForbiddenZoneNum)
+                {
+                    return false;
+                }
+                ForbiddenZoneMap.Add(fz.ID, fz);
+                ForbiddenZoneList.Add(fz);
                 return true;
             }
         }
@@ -2184,17 +2222,25 @@ namespace YimaWF
             }
             else
             {
-                for (int i = MinPipelineZoneID; i < MaxPipelineZoneNum + 1; i++)
+                if (pl.ID == 0)
                 {
-                    Pipeline tmp;
-                    if (!PipelineMap.TryGetValue(i, out tmp))
+                    for (int i = MinPipelineZoneID; i < MinPipelineZoneID + MaxPipelineZoneNum; i++)
                     {
-                        pl.ID = i;
-                        PipelineMap.Add(i, pl);
-                        PipelineList.Add(pl);
-                        break;
+                        Pipeline tmp;
+                        if (!PipelineMap.TryGetValue(i, out tmp))
+                        {
+                            pl.ID = i;
+
+                            break;
+                        }
                     }
                 }
+                else if(pl.ID < MinPipelineZoneID || pl.ID > MinPipelineZoneID + MaxPipelineZoneNum)
+                {
+                    return false;
+                }
+                PipelineMap.Add(pl.ID, pl);
+                PipelineList.Add(pl);
                 return true;
             }
         }
@@ -2265,10 +2311,10 @@ namespace YimaWF
             if (IsOnOperation(CURRENT_SUB_OPERATION.RANGING) || IsOnOperation(CURRENT_SUB_OPERATION.RANGED))
             {
                 RangingPoingList.Clear();
-                if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
-                    ClearOperation(CURRENT_SUB_OPERATION.RANGING);
                 if(IsOnOperation(CURRENT_SUB_OPERATION.RANGED))
                     ClearOperation(CURRENT_SUB_OPERATION.RANGED);
+                if (IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
+                    ClearOperation(CURRENT_SUB_OPERATION.RANGING);
                 Invalidate();
             }
         }
@@ -2717,20 +2763,6 @@ namespace YimaWF
             return retDegreeString;
         }
 
-        private GeoPoint GetGeoPoint(double longitude, double latitude)
-        {
-            try
-            {
-                int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
-                GeoPoint gp = new GeoPoint(Convert.ToInt32(longitude * iGeoCoorMultiFactor), Convert.ToInt32(latitude * iGeoCoorMultiFactor));
-                return gp;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
         private bool CheckTargetApproach(GeoPoint lastPoint, double longitude, double latitude)
         {
             int iGeoCoorMultiFactor = axYimaEnc.GetGeoCoorMultiFactor();
@@ -2849,7 +2881,7 @@ namespace YimaWF
         private Point GetCursorPoint()
         {
             //鼠标当前位置会有偏差（状态栏导致？），需要修正
-            Point p = Cursor.Position;
+            Point p = PointToClient(Control.MousePosition);
             p.X -= 8;
             p.Y -= 29;
             return p;

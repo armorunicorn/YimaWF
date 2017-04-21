@@ -16,5 +16,9 @@ namespace YimaWF.data
         public string Name;
         //管道宽度，单位毫米
         public int width = 1000;
+
+        public int AlarmLevel = 200;
+
+        public string Remark = "";
     }
 }

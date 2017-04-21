@@ -52,8 +52,8 @@ namespace YimaWF.data
                 NotifyPropertyChanged("Speed");
             }
         }
-        private float course = 0;
-        public float Course
+        private double course = 0;
+        public double Course
         {
             get { return course; }
             set
@@ -74,8 +74,8 @@ namespace YimaWF.data
             }
         }
 
-        private float north;
-        public float North
+        private double north;
+        public double North
         {
             get { return north; }
             set
@@ -154,7 +154,7 @@ namespace YimaWF.data
 
         #region AIS数据
         public bool ShowSpeedLine = true;
-        public int IMO { get; set; }
+        public uint IMO { get; set; }
         public string MIMSI { get; set; }
         public string CallSign { get; set; }
         //国籍
@@ -186,7 +186,7 @@ namespace YimaWF.data
         //最大吃水深度
         public float MaxDeep { get; set; }
         //船载人数
-        public int Capacity { get; set; }
+        public uint Capacity { get; set; }
         //目的地
         public string Destination { get; set; }
         public int AISType { get; set; }
@@ -224,7 +224,7 @@ namespace YimaWF.data
 
 
 
-        public Target(int id, float course, float speed, TargetSource source = TargetSource.Radar)
+        public Target(int id, double course, float speed, TargetSource source = TargetSource.Radar)
         {
             Source = source;
             ID = id;

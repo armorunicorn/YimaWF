@@ -11,7 +11,7 @@ namespace YimaWF.data
     {
         public int ID;
         public Color ScanColor = Color.FromArgb(0, 255, 0);
-        public int CurAngle = 0;
+        public int CurAngle { get; set; }
         //雷达圆在图上的半径（像素）
         public float Radius;
         //雷达的物理半径（毫米）
