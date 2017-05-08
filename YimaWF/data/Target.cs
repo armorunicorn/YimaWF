@@ -27,13 +27,18 @@ namespace YimaWF.data
         Checked  //已确认（不再显示）
     }
 
+    public enum AlarmAction
+    {
+        None = 0,
+        Into = 1,
+        Out = 2,
+        Resident = 3
+    }
+
     public enum TargetType
     {
-        WorkBoat, //工作船
-        FishingBoat,//渔船
-        VietnamFishingBoat, //越南渔船
-        MerChantBoat,//商船
-        Yacht, //游艇
+        Suspicious, //可疑
+        Normal, //一般
         Unknow //未知
     }
 
@@ -171,6 +176,9 @@ namespace YimaWF.data
             }
         }
 
+        /// <summary>
+        /// 到达目的地的时间
+        /// </summary>
         private string arriveTime;
         public string ArriveTime
         {
@@ -179,6 +187,19 @@ namespace YimaWF.data
             {
                 arriveTime = value;
                 NotifyPropertyChanged("ArriveTime");
+            }
+        }
+        /// <summary>
+        /// 到达平台的时间
+        /// </summary>
+        private string arrivePlatformTime;
+        public string ArrivePlatformTime
+        {
+            get { return arrivePlatformTime; }
+            set
+            {
+                arrivePlatformTime = value;
+                NotifyPropertyChanged("ArrivePlatformTime");
             }
         }
         //航行状态
@@ -208,6 +229,18 @@ namespace YimaWF.data
                 NotifyPropertyChanged("Alarm");
             }
         }
+
+        private AlarmAction action = AlarmAction.None;
+        public AlarmAction Action
+        {
+            get { return action; }
+            set
+            {
+                action = value;
+                NotifyPropertyChanged("Action");
+            }
+        }
+
         //告警时间
         private string alarmTime;
         public string AlarmTime
@@ -236,17 +269,18 @@ namespace YimaWF.data
 
         public bool Equals(Target t)
         {
-            if (this.Source == t.Source && this.ID == t.ID)
-            {
-                if (t.Source == TargetSource.Radar)
+            if (t != null)
+                if (this.Source == t.Source && this.ID == t.ID)
                 {
-                    if (this.RadarID != t.RadarID)
+                    if (t.Source == TargetSource.Radar)
                     {
-                        return false;
+                        if (this.RadarID != t.RadarID)
+                        {
+                            return false;
+                        }
                     }
+                    return true;
                 }
-                return true;
-            }
             return false;
         }
 

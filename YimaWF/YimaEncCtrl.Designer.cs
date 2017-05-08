@@ -40,28 +40,24 @@
             this.TargetDataTimer = new System.Windows.Forms.Timer(this.components);
             this.targetContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.ShowDetail = new System.Windows.Forms.ToolStripMenuItem();
-            this.OptLinkageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ShowTrackMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.TargetCenterToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.AutoTrackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.ManualTrackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RadarTimer = new System.Windows.Forms.Timer(this.components);
             this.normalContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.ShowRadarTargetItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ShowAISTargetItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ShowMergeTargetItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.ShowOptMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ShowRadarMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.光电观察范围ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.ShowOptLineToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ShowAllTrackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ShowSpeedLineToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.ShowRadarTargetStatusToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.ShowAISTargetStatusToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.ShowMergeTargetStatusToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.addContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.CancelAdd = new System.Windows.Forms.ToolStripMenuItem();
             this.CancelPoint = new System.Windows.Forms.ToolStripMenuItem();
             this.EndAdd = new System.Windows.Forms.ToolStripMenuItem();
-            this.ShowRadarTargetStatusToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.ShowAISTargetStatusToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.ShowMergeTargetStatusToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.axYimaEnc)).BeginInit();
             this.statusStrip1.SuspendLayout();
             this.targetContextMenu.SuspendLayout();
@@ -135,57 +131,33 @@
             // 
             this.targetContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.ShowDetail,
-            this.OptLinkageToolStripMenuItem,
             this.ShowTrackMenuItem,
-            this.TargetCenterToolStripMenuItem,
-            this.AutoTrackToolStripMenuItem,
-            this.ManualTrackToolStripMenuItem});
+            this.TargetCenterToolStripMenuItem});
             this.targetContextMenu.Name = "targetContextMenu";
-            this.targetContextMenu.Size = new System.Drawing.Size(149, 136);
+            this.targetContextMenu.Size = new System.Drawing.Size(153, 92);
             // 
             // ShowDetail
             // 
             this.ShowDetail.Name = "ShowDetail";
-            this.ShowDetail.Size = new System.Drawing.Size(148, 22);
+            this.ShowDetail.Size = new System.Drawing.Size(152, 22);
             this.ShowDetail.Text = "目标详细信息";
             this.ShowDetail.Click += new System.EventHandler(this.ShowDetail_Click);
-            // 
-            // OptLinkageToolStripMenuItem
-            // 
-            this.OptLinkageToolStripMenuItem.Name = "OptLinkageToolStripMenuItem";
-            this.OptLinkageToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
-            this.OptLinkageToolStripMenuItem.Text = "光电联动";
-            this.OptLinkageToolStripMenuItem.Click += new System.EventHandler(this.OptLinkageToolStripMenuItem_Click);
             // 
             // ShowTrackMenuItem
             // 
             this.ShowTrackMenuItem.Checked = true;
             this.ShowTrackMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.ShowTrackMenuItem.Name = "ShowTrackMenuItem";
-            this.ShowTrackMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.ShowTrackMenuItem.Size = new System.Drawing.Size(152, 22);
             this.ShowTrackMenuItem.Text = "显示航迹";
             this.ShowTrackMenuItem.Click += new System.EventHandler(this.ShowTrackMenuItem_Click);
             // 
             // TargetCenterToolStripMenuItem
             // 
             this.TargetCenterToolStripMenuItem.Name = "TargetCenterToolStripMenuItem";
-            this.TargetCenterToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
-            this.TargetCenterToolStripMenuItem.Text = "目标居中";
+            this.TargetCenterToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.TargetCenterToolStripMenuItem.Text = "目标归心";
             this.TargetCenterToolStripMenuItem.Click += new System.EventHandler(this.TargetCenterToolStripMenuItem_Click);
-            // 
-            // AutoTrackToolStripMenuItem
-            // 
-            this.AutoTrackToolStripMenuItem.Name = "AutoTrackToolStripMenuItem";
-            this.AutoTrackToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
-            this.AutoTrackToolStripMenuItem.Text = "自动跟踪";
-            this.AutoTrackToolStripMenuItem.Click += new System.EventHandler(this.AutoTrackToolStripMenuItem_Click);
-            // 
-            // ManualTrackToolStripMenuItem
-            // 
-            this.ManualTrackToolStripMenuItem.Name = "ManualTrackToolStripMenuItem";
-            this.ManualTrackToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
-            this.ManualTrackToolStripMenuItem.Text = "手动跟踪";
-            this.ManualTrackToolStripMenuItem.Click += new System.EventHandler(this.ManualTrackToolStripMenuItem_Click);
             // 
             // RadarTimer
             // 
@@ -198,16 +170,15 @@
             this.ShowRadarTargetItem,
             this.ShowAISTargetItem,
             this.ShowMergeTargetItem,
-            this.ShowOptMenuItem,
             this.ShowRadarMenuItem,
-            this.光电观察范围ToolStripMenuItem,
+            this.ShowOptLineToolStripMenuItem,
             this.ShowAllTrackToolStripMenuItem,
             this.ShowSpeedLineToolStripMenuItem,
             this.ShowRadarTargetStatusToolStripMenuItem,
             this.ShowAISTargetStatusToolStripMenuItem,
             this.ShowMergeTargetStatusToolStripMenuItem});
             this.normalContextMenu.Name = "normalContextMenu";
-            this.normalContextMenu.Size = new System.Drawing.Size(173, 268);
+            this.normalContextMenu.Size = new System.Drawing.Size(173, 224);
             // 
             // ShowRadarTargetItem
             // 
@@ -236,15 +207,6 @@
             this.ShowMergeTargetItem.Text = "融合态势";
             this.ShowMergeTargetItem.Click += new System.EventHandler(this.ShowMergeTargetItem_Click);
             // 
-            // ShowOptMenuItem
-            // 
-            this.ShowOptMenuItem.Checked = true;
-            this.ShowOptMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.ShowOptMenuItem.Name = "ShowOptMenuItem";
-            this.ShowOptMenuItem.Size = new System.Drawing.Size(172, 22);
-            this.ShowOptMenuItem.Text = "光电态势";
-            this.ShowOptMenuItem.Click += new System.EventHandler(this.ShowOptMenuItem_Click);
-            // 
             // ShowRadarMenuItem
             // 
             this.ShowRadarMenuItem.Checked = true;
@@ -254,13 +216,14 @@
             this.ShowRadarMenuItem.Text = "雷达扫描线";
             this.ShowRadarMenuItem.Click += new System.EventHandler(this.ShowRadarMenuItem_Click);
             // 
-            // 光电观察范围ToolStripMenuItem
+            // ShowOptLineToolStripMenuItem
             // 
-            this.光电观察范围ToolStripMenuItem.Checked = true;
-            this.光电观察范围ToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.光电观察范围ToolStripMenuItem.Name = "光电观察范围ToolStripMenuItem";
-            this.光电观察范围ToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
-            this.光电观察范围ToolStripMenuItem.Text = "光电观察范围";
+            this.ShowOptLineToolStripMenuItem.Checked = true;
+            this.ShowOptLineToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.ShowOptLineToolStripMenuItem.Name = "ShowOptLineToolStripMenuItem";
+            this.ShowOptLineToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.ShowOptLineToolStripMenuItem.Text = "光电观察范围";
+            this.ShowOptLineToolStripMenuItem.Click += new System.EventHandler(this.ShowOptLineToolStripMenuItem_Click);
             // 
             // ShowAllTrackToolStripMenuItem
             // 
@@ -279,6 +242,33 @@
             this.ShowSpeedLineToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
             this.ShowSpeedLineToolStripMenuItem.Text = "航首线显示";
             this.ShowSpeedLineToolStripMenuItem.Click += new System.EventHandler(this.ShowSpeedLineToolStripMenuItem_Click);
+            // 
+            // ShowRadarTargetStatusToolStripMenuItem
+            // 
+            this.ShowRadarTargetStatusToolStripMenuItem.Checked = true;
+            this.ShowRadarTargetStatusToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.ShowRadarTargetStatusToolStripMenuItem.Name = "ShowRadarTargetStatusToolStripMenuItem";
+            this.ShowRadarTargetStatusToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.ShowRadarTargetStatusToolStripMenuItem.Text = "雷达目标状态显示";
+            this.ShowRadarTargetStatusToolStripMenuItem.Click += new System.EventHandler(this.ShowRadarTargetStatusToolStripMenuItem_Click);
+            // 
+            // ShowAISTargetStatusToolStripMenuItem
+            // 
+            this.ShowAISTargetStatusToolStripMenuItem.Checked = true;
+            this.ShowAISTargetStatusToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.ShowAISTargetStatusToolStripMenuItem.Name = "ShowAISTargetStatusToolStripMenuItem";
+            this.ShowAISTargetStatusToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.ShowAISTargetStatusToolStripMenuItem.Text = "AIS目标状态显示";
+            this.ShowAISTargetStatusToolStripMenuItem.Click += new System.EventHandler(this.ShowAISTargetStatusToolStripMenuItem_Click);
+            // 
+            // ShowMergeTargetStatusToolStripMenuItem
+            // 
+            this.ShowMergeTargetStatusToolStripMenuItem.Checked = true;
+            this.ShowMergeTargetStatusToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.ShowMergeTargetStatusToolStripMenuItem.Name = "ShowMergeTargetStatusToolStripMenuItem";
+            this.ShowMergeTargetStatusToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.ShowMergeTargetStatusToolStripMenuItem.Text = "融合目标状态显示";
+            this.ShowMergeTargetStatusToolStripMenuItem.Click += new System.EventHandler(this.ShowMergeTargetStatusToolStripMenuItem_Click);
             // 
             // addContextMenu
             // 
@@ -309,33 +299,6 @@
             this.EndAdd.Size = new System.Drawing.Size(124, 22);
             this.EndAdd.Text = "完成绘制";
             this.EndAdd.Click += new System.EventHandler(this.EndAdd_Click);
-            // 
-            // ShowRadarTargetStatusToolStripMenuItem
-            // 
-            this.ShowRadarTargetStatusToolStripMenuItem.Checked = true;
-            this.ShowRadarTargetStatusToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.ShowRadarTargetStatusToolStripMenuItem.Name = "ShowRadarTargetStatusToolStripMenuItem";
-            this.ShowRadarTargetStatusToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
-            this.ShowRadarTargetStatusToolStripMenuItem.Text = "雷达目标状态显示";
-            this.ShowRadarTargetStatusToolStripMenuItem.Click += new System.EventHandler(this.ShowRadarTargetStatusToolStripMenuItem_Click);
-            // 
-            // ShowAISTargetStatusToolStripMenuItem
-            // 
-            this.ShowAISTargetStatusToolStripMenuItem.Checked = true;
-            this.ShowAISTargetStatusToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.ShowAISTargetStatusToolStripMenuItem.Name = "ShowAISTargetStatusToolStripMenuItem";
-            this.ShowAISTargetStatusToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
-            this.ShowAISTargetStatusToolStripMenuItem.Text = "AIS目标状态显示";
-            this.ShowAISTargetStatusToolStripMenuItem.Click += new System.EventHandler(this.ShowAISTargetStatusToolStripMenuItem_Click);
-            // 
-            // ShowMergeTargetStatusToolStripMenuItem
-            // 
-            this.ShowMergeTargetStatusToolStripMenuItem.Checked = true;
-            this.ShowMergeTargetStatusToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.ShowMergeTargetStatusToolStripMenuItem.Name = "ShowMergeTargetStatusToolStripMenuItem";
-            this.ShowMergeTargetStatusToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
-            this.ShowMergeTargetStatusToolStripMenuItem.Text = "融合目标状态显示";
-            this.ShowMergeTargetStatusToolStripMenuItem.Click += new System.EventHandler(this.ShowMergeTargetStatusToolStripMenuItem_Click);
             // 
             // YimaEncCtrl
             // 
@@ -373,10 +336,8 @@
         private System.Windows.Forms.ToolStripMenuItem ShowRadarTargetItem;
         private System.Windows.Forms.ToolStripMenuItem ShowAISTargetItem;
         private System.Windows.Forms.ToolStripMenuItem ShowMergeTargetItem;
-        private System.Windows.Forms.ToolStripMenuItem ShowOptMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ShowRadarMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem 光电观察范围ToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem OptLinkageToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem ShowOptLineToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ShowTrackMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ShowAllTrackToolStripMenuItem;
         private System.Windows.Forms.ContextMenuStrip addContextMenu;
@@ -384,8 +345,6 @@
         private System.Windows.Forms.ToolStripMenuItem CancelPoint;
         private System.Windows.Forms.ToolStripMenuItem EndAdd;
         private System.Windows.Forms.ToolStripMenuItem TargetCenterToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem AutoTrackToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem ManualTrackToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ShowSpeedLineToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ShowRadarTargetStatusToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ShowAISTargetStatusToolStripMenuItem;

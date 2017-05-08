@@ -27,6 +27,8 @@ namespace YimaWF
     public delegate void ShowRangingResultDelegate(int len);
     public delegate void AutoTrackTargetDelegate(Target t, double longitude, double latitude);
     public delegate void ManualTrackTargetDelegate(Target t, double longitude, double latitude);
+    public delegate void ShowMessageDelegate(string msg);
+    public delegate void GetAlarmDelegate(int tip, Target t);
 
     public partial class YimaEncCtrl: UserControl
     {
@@ -111,6 +113,8 @@ namespace YimaWF
         public event AddedPipelineDelegate AddedPipeline;
         public event AutoTrackTargetDelegate AutoTrackTarget;
         public event ManualTrackTargetDelegate ManualTrackTarget;
+        public event ShowMessageDelegate ShowMessage;
+        public event GetAlarmDelegate GetAlarm;
         #endregion
 
         CURRENT_SUB_OPERATION m_curOperation = CURRENT_SUB_OPERATION.NO_OPERATION;
@@ -156,12 +160,13 @@ namespace YimaWF
         #endregion
 
         #region 切换显示
-        private bool showRadarTarget = true;
-        private bool showMergeTarget = true;
-        private bool showAISTarget = true;
-        private bool showRadar = true;
-        private bool showOpt = true;
-        private bool showTrack = true;
+        public bool showRadarTarget = true;
+        public bool showMergeTarget = true;
+        public bool showAISTarget = true;
+        public bool showRadar = true;
+        public bool showOpt = true; //光电扫描线
+        public bool showTrack = true;
+        public bool showSpeedLine = true; //AIS目标速度线
         #endregion
 
         #region 数据回放
@@ -253,11 +258,11 @@ namespace YimaWF
             AppConfig = new Config();
             //添加默认配置
             AppConfig.TargetColor.Add(TargetType.Unknow, Color.FromArgb(139, 37, 00));
-            AppConfig.TargetColor.Add(TargetType.Yacht, Color.FromArgb(139, 37, 00));
-            AppConfig.TargetColor.Add(TargetType.WorkBoat, Color.FromArgb(0, 100, 0));
-            AppConfig.TargetColor.Add(TargetType.FishingBoat, Color.FromArgb(0, 0, 170));
-            AppConfig.TargetColor.Add(TargetType.MerChantBoat, Color.FromArgb(205, 0, 205));
-            AppConfig.TargetColor.Add(TargetType.VietnamFishingBoat, Color.FromArgb(255, 0, 0));
+            //AppConfig.TargetColor.Add(TargetType.Yacht, Color.FromArgb(139, 37, 00));
+            AppConfig.TargetColor.Add(TargetType.Normal, Color.FromArgb(0, 100, 0));
+            //AppConfig.TargetColor.Add(TargetType.FishingBoat, Color.FromArgb(0, 0, 170));
+            //AppConfig.TargetColor.Add(TargetType.MerChantBoat, Color.FromArgb(205, 0, 205));
+            AppConfig.TargetColor.Add(TargetType.Suspicious, Color.FromArgb(255, 0, 0));
             AppConfig.TargetStatusFont = new Font("宋体", 10);
             AppConfig.RangFont = new Font("宋体", 15);
             AppConfig.ProtectZonePen = Color.Red;
@@ -307,12 +312,6 @@ namespace YimaWF
                         DrawPipeline(g, curPipeline);
                         break;
                     }
-                    //测距模式
-                    if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING) || IsOnOperation(CURRENT_SUB_OPERATION.RANGED))
-                    {
-                        DrawRangingPoint(g, RangingPoingList);
-                        break;
-                    }
                     //航迹查询模式，只显示一条船的航迹
                     if (IsOnOperation(CURRENT_SUB_OPERATION.SHOWING_TRACK))
                     {
@@ -329,6 +328,11 @@ namespace YimaWF
                         break;
                     }*/
                     //以上模式都不会绘制当前目标，只有当不在以上模式的时候，才开始绘制当前目标
+                    //测距模式
+                    if (IsOnOperation(CURRENT_SUB_OPERATION.RANGING) || IsOnOperation(CURRENT_SUB_OPERATION.RANGED))
+                    {
+                        DrawRangingPoint(g, RangingPoingList);
+                    }
                     Target selectedTarget = null;
                     if (showAISTarget)
                         foreach (var t in AISTargetDic.Values)
@@ -437,7 +441,7 @@ namespace YimaWF
                     D.X = A.X;
                     D.Y = A.Y - Convert.ToInt32(t.Speed * 2);
                     //根据船的航向旋转三角形
-                    Rotate(t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
+                    Rotate(360 - t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
                     Point[] points = { A, B, C };
                     //画出船的图标
                     g.FillPolygon(brush, points);
@@ -456,7 +460,7 @@ namespace YimaWF
                     D.X = curX - TargetRectFactor;
                     D.Y = curY + TargetRectFactor;
                     //根据船的航向旋转图形
-                    Rotate(t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
+                    Rotate(360 - t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
                     Point[] points = { A, B, C, D };
                     //无告警时显示正常图标
                     if (t.Alarm == AlarmType.None || t.Alarm == AlarmType.Checked)
@@ -506,7 +510,6 @@ namespace YimaWF
                     g.FillEllipse(brush, rect);
                 }
 
-
                 //画出船的状态
                 string statusStr = "";
                 Brush statusBrush;
@@ -528,7 +531,7 @@ namespace YimaWF
                         if (AppConfig.ShowTargetSpeed)
                             statusStr += string.Format("{0:F2} kts\n", t.Speed);
                         if (AppConfig.ShowTargetArriveTime)
-                            statusStr += string.Format("{0}\n", t.ArriveTime);
+                            statusStr += string.Format("{0}\n", t.ArrivePlatformTime);
                         if (t.IsSelected)
                         {
                             statusBrush = Brushes.Green;
@@ -576,7 +579,7 @@ namespace YimaWF
                     D.X = curX - factor;
                     D.Y = curY + factor;
                     //根据船的航向旋转图形
-                    Rotate(t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
+                    Rotate(360 - t.Course, ref A, ref B, ref C, ref D, new Point(curX, curY));
                     //画出船的图标
                     g.DrawPolygon(AppConfig.TargetSelectPen, new Point[] { A, B, C, D });
                 }
@@ -908,16 +911,31 @@ namespace YimaWF
                 {
                     if (curForbiddenZone.PointList.Count < 10)
                     {
-                        axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
-                        curForbiddenZone.PointList.Add(new GeoPoint(geoPoX, geoPoY));
-                        Invalidate();
+                        if (curForbiddenZone.PointList.Count <= 10)
+                        {
+                            axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
+                            curForbiddenZone.PointList.Add(new GeoPoint(geoPoX, geoPoY));
+                            Invalidate();
+                        }
+                        else
+                        {
+                            ShowMessage?.Invoke("输入的点超过10个");
+                        }
+
                     }
                 }
                 else if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
                 {
-                    axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
-                    curPipeline.PointList.Add(new GeoPoint(geoPoX, geoPoY));
-                    Invalidate();
+                    if (curPipeline.PointList.Count <= 10)
+                    {
+                        axYimaEnc.GetGeoPoFromScrnPo(e.Location.X, e.Location.Y, ref geoPoX, ref geoPoY);
+                        curPipeline.PointList.Add(new GeoPoint(geoPoX, geoPoY));
+                        Invalidate();
+                    }
+                    else
+                    {
+                        ShowMessage?.Invoke("输入的点超过10个");
+                    }
                 }
                 else if(IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
                 {
@@ -937,7 +955,7 @@ namespace YimaWF
                 }
                 else if(IsOnOperation(CURRENT_SUB_OPERATION.AREA_ZOOM))
                 {
-                    areaZoomStartPo = e.Location;
+                    areaZoomStartPo = GetCursorPoint();
                 }
             }
         }
@@ -1015,16 +1033,19 @@ namespace YimaWF
                 {
                     Point p = GetCursorPoint();
                     Rectangle rect = GetRectFromPoint(areaZoomStartPo, p);
-                    float proportion = (axYimaEnc.GetGeoLenFromScrnLen(rect.Width) / axYimaEnc.Width) 
-                        / (axYimaEnc.GetGeoLenFromScrnLen(axYimaEnc.Width) / axYimaEnc.Width);
-                    int x = 0, y = 0;
-                    axYimaEnc.GetGeoPoFromScrnPo(rect.X + rect.Width / 2, rect.Y + rect.Height / 2, ref x, ref y);
-                    axYimaEnc.SetCurrentScale(proportion * axYimaEnc.GetCurrentScale());
-                    RefreshScaleStatusBar();
-                    RefreshRadarRadius();
-                    //int x = rect.X + Width / 2, y = rect.Y + Height / 2;
-                    
-                    axYimaEnc.CenterMap(x, y);
+                    if (rect.Height > 10 && rect.Width > 10)
+                    {
+                        float proportion = (axYimaEnc.GetGeoLenFromScrnLen(rect.Width) / axYimaEnc.Width)
+                            / (axYimaEnc.GetGeoLenFromScrnLen(axYimaEnc.Width) / axYimaEnc.Width);
+                        int x = 0, y = 0;
+                        axYimaEnc.GetGeoPoFromScrnPo(rect.X + rect.Width / 2, rect.Y + rect.Height / 2, ref x, ref y);
+                        axYimaEnc.SetCurrentScale(proportion * axYimaEnc.GetCurrentScale());
+                        RefreshScaleStatusBar();
+                        RefreshRadarRadius();
+                        //int x = rect.X + Width / 2, y = rect.Y + Height / 2;
+
+                        axYimaEnc.CenterMap(x, y);
+                    }
                     areaZoomStartPo = Point.Empty;
                     
                 }
@@ -1408,40 +1429,39 @@ namespace YimaWF
         }
         #endregion
 
-        #region 菜单相应函数
+        #region 菜单响应函数
 
         #region 海图区域右键菜单
         private void ShowRadarTargetItem_Click(object sender, EventArgs e)
         {
-            ShowRadarTargetItem.Checked = !ShowRadarTargetItem.Checked;
+            //ShowRadarTargetItem.Checked = !ShowRadarTargetItem.Checked;
             SetDisplayMode(TARGET_TYPE.READER, !showRadarTarget);
             Invalidate();
         }
 
         private void ShowAISTargetItem_Click(object sender, EventArgs e)
         {
-            ShowAISTargetItem.Checked = !ShowAISTargetItem.Checked;
             SetDisplayMode(TARGET_TYPE.AIS, !showAISTarget);
             Invalidate();
         }
 
         private void ShowMergeTargetItem_Click(object sender, EventArgs e)
         {
-            ShowMergeTargetItem.Checked = !ShowMergeTargetItem.Checked;
+            //ShowMergeTargetItem.Checked = !ShowMergeTargetItem.Checked;
             SetDisplayMode(TARGET_TYPE.MERGER, !showMergeTarget);
             Invalidate();
         }
 
-        private void ShowOptMenuItem_Click(object sender, EventArgs e)
+        private void ShowOptLineToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ShowOptMenuItem.Checked = !ShowOptMenuItem.Checked;
+            //ShowOptLineToolStripMenuItem.Checked = !ShowOptLineToolStripMenuItem.Checked;
             SetDisplayMode(TARGET_TYPE.OPTLINE, !showOpt);
             Invalidate();
         }
 
         private void ShowRadarMenuItem_Click(object sender, EventArgs e)
         {
-            ShowRadarMenuItem.Checked = !ShowRadarMenuItem.Checked;
+            //ShowRadarMenuItem.Checked = !ShowRadarMenuItem.Checked;
             SetDisplayMode(TARGET_TYPE.RADARLINE, !showRadar);
             Invalidate();
         }
@@ -1454,13 +1474,13 @@ namespace YimaWF
 
         private void ShowAllTrackToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ShowAllTrackToolStripMenuItem.Checked = !ShowAllTrackToolStripMenuItem.Checked;
-            SetShowTrackOrNot(ShowAllTrackToolStripMenuItem.Checked);
+            //ShowAllTrackToolStripMenuItem.Checked = !ShowAllTrackToolStripMenuItem.Checked;
+            SetShowTrackOrNot(!ShowAllTrackToolStripMenuItem.Checked);
         }
         private void ShowSpeedLineToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ShowSpeedLineToolStripMenuItem.Checked = !ShowSpeedLineToolStripMenuItem.Checked;
-            SetShowTargetSpeedLineOrNot(ShowSpeedLineToolStripMenuItem.Checked);
+            //ShowSpeedLineToolStripMenuItem.Checked = !ShowSpeedLineToolStripMenuItem.Checked;
+            SetShowTargetSpeedLineOrNot(!showSpeedLine);
         }
 
         private void ShowRadarTargetStatusToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1511,8 +1531,15 @@ namespace YimaWF
             {
                 if (AddedForbiddenZone != null)
                 {
-                    AddedForbiddenZone(curForbiddenZone);
-                    EndAddForbiddenZone();
+                    if (curForbiddenZone.PointList.Count > 2)
+                    {
+                        AddedForbiddenZone(curForbiddenZone);
+                        EndAddForbiddenZone();
+                    }
+                    else
+                    {
+                        ShowMessage?.Invoke("输入的坐标点过少");
+                    }
                 }
                 else
                 {
@@ -1523,8 +1550,15 @@ namespace YimaWF
             {
                 if (AddedPipeline != null)
                 {
-                    AddedPipeline(curPipeline);
-                    EndAddPipeline();
+                    if (curPipeline.PointList.Count > 1)
+                    {
+                        AddedPipeline(curPipeline);
+                        EndAddPipeline();
+                    }
+                    else
+                    {
+                        ShowMessage?.Invoke("输入的坐标点过少");
+                    }
                 }
                 else
                 {
@@ -1579,10 +1613,15 @@ namespace YimaWF
         #region 航迹查询
         public void ShowTargetTrack(Target t)
         {
-            if (!IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION))
+            if (!IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) || t.Track.Count < 1)
+            {
+                ShowMessage?.Invoke("当前海图处于其他状态或航迹点过少");
                 return;
+            }
             SetOperation(CURRENT_SUB_OPERATION.SHOWING_TRACK);
             CurShowingTrackTarget = t;
+            TrackPoint tp = t.Track[0];
+            axYimaEnc.CenterMap(tp.Point.x, tp.Point.y);
             Invalidate();
         }
         public void FinishShowTargetTrack()
@@ -1786,18 +1825,23 @@ namespace YimaWF
             switch (type)
             {
                 case TARGET_TYPE.READER:
+                    ShowRadarTargetItem.Checked = isShow;
                     showRadarTarget = isShow;
                     break;
                 case TARGET_TYPE.AIS:
+                    ShowAISTargetItem.Checked = isShow;
                     showAISTarget = isShow;
                     break;
                 case TARGET_TYPE.MERGER:
+                    ShowMergeTargetItem.Checked = isShow;
                     showMergeTarget = isShow;
                     break;
                 case TARGET_TYPE.RADARLINE:
+                    ShowRadarMenuItem.Checked = isShow;
                     showRadar = isShow;
                     break;
                 case TARGET_TYPE.OPTLINE:
+                    ShowOptLineToolStripMenuItem.Checked = isShow;
                     showOpt = isShow;
                     break;
             }
@@ -1806,6 +1850,7 @@ namespace YimaWF
         public void SetShowTrackOrNot(bool isShow)
         {
             showTrack = isShow;
+            ShowAllTrackToolStripMenuItem.Checked = isShow;
             var dicList = new ObservableCollection<Target>[] { AISTargetList, MergeTargetList, RadarTargetList };
             foreach(var list in dicList)
                 foreach(var t in list)
@@ -1817,7 +1862,9 @@ namespace YimaWF
 
         public void SetShowTargetSpeedLineOrNot(bool isShow)
         {
-            foreach(var t in AISTargetDic.Values.ToList())
+            ShowSpeedLineToolStripMenuItem.Checked = isShow;
+            showSpeedLine = isShow;
+            foreach (var t in AISTargetDic.Values.ToList())
             {
                 t.ShowSpeedLine = isShow;
             }
@@ -1899,7 +1946,7 @@ namespace YimaWF
 
         public void SetSelectedTarget(Target t)
         {
-            if (t != null)
+            if (t != null && !t.Equals(CurSelectedTarget))
             {
                 if (CurSelectedTarget != null)
                 {
@@ -2044,7 +2091,10 @@ namespace YimaWF
                 return true;
             }
             else
+            {
+                ShowMessage?.Invoke("海图处于其他模式或当期区域数量已达到上限");
                 return false;
+            }
         }
 
         public void ClearLastForbiddenZonePoint()
@@ -2064,6 +2114,7 @@ namespace YimaWF
             if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
             {
                 curForbiddenZone = null;
+                AddedForbiddenZone?.Invoke(null);
                 ClearOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE);
                 Invalidate();
             }
@@ -2175,7 +2226,10 @@ namespace YimaWF
                 return true;
             }
             else
+            {
+                ShowMessage?.Invoke("海图处于其他模式或当期管道数量已达到上限");
                 return false;
+            }
         }
 
         public void ClearLastPipelinePoint()
@@ -2196,6 +2250,7 @@ namespace YimaWF
             {
                 curPipeline = null;
                 ClearOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE);
+                AddedPipeline(null);
                 Invalidate();
             }
         }
@@ -2335,7 +2390,7 @@ namespace YimaWF
             {
                 axYimaEnc.GetLibMapInfo(i, ref mapType, ref mapName, ref tmp1, ref tmp2, ref tmp2, 
                     ref tmp2, ref tmp2, ref tmp2, ref tmp2);
-                list.Add(mapName);
+                list.Add(mapName.Split('\0')[0]);
             }
             return list;
         }
@@ -2373,7 +2428,10 @@ namespace YimaWF
 
         public bool AddMap(string mapPath)
         {
-            return axYimaEnc.AddMapToLib(mapPath);
+            var r = axYimaEnc.AddMapToLib(mapPath);
+            if (r)
+                Invalidate();
+            return r;
         }
 
         public void DeleteMap(int libMapPos)
@@ -2382,6 +2440,7 @@ namespace YimaWF
                 return;
 
             axYimaEnc.DeleteLibMap(libMapPos);
+            Invalidate();
         }
 
         public void OverViewMap(int libMapPos)
@@ -2446,6 +2505,7 @@ namespace YimaWF
             tmp.UpdateTime = t.UpdateTime;
             tmp.Distance = t.Distance;
             tmp.ArriveTime = t.ArriveTime;
+            tmp.ArrivePlatformTime = t.ArrivePlatformTime;
             tmp.North = t.North;
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             radar.TargetMap.Add(tmp.ID, tmp);
@@ -2464,6 +2524,7 @@ namespace YimaWF
             tmp.UpdateTime = t.UpdateTime;
             tmp.Distance = t.Distance;
             tmp.ArriveTime = t.ArriveTime;
+            tmp.ArrivePlatformTime = t.ArrivePlatformTime;
             tmp.North = t.North;
             tmp.IsApproach = CheckTargetApproach(tmp.Track.Last().Point, longitude, latitude);
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
@@ -2517,6 +2578,7 @@ namespace YimaWF
             }
             tmp = new Target(t.ID, t.Course, t.Speed, TargetSource.AIS);
             tmp.ArriveTime = t.ArriveTime;
+            tmp.ArrivePlatformTime = t.ArrivePlatformTime;
             tmp.AISType = t.AISType;
             tmp.CallSign = t.CallSign;
             tmp.Capacity = t.Capacity;
@@ -2532,6 +2594,7 @@ namespace YimaWF
             tmp.UpdateTime = t.UpdateTime;
             tmp.Type = t.Type;
             tmp.North = t.North;
+            tmp.Action = t.Action;
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             AISTargetDic.Add(t.ID, tmp);
             AllTargetList.Add(tmp);
@@ -2548,6 +2611,7 @@ namespace YimaWF
                 return false;
             }
             tmp.ArriveTime = t.ArriveTime;
+            tmp.ArrivePlatformTime = t.ArrivePlatformTime;
             tmp.AISType = t.AISType;
             tmp.CallSign = t.CallSign;
             tmp.Capacity = t.Capacity;
@@ -2564,6 +2628,7 @@ namespace YimaWF
             tmp.UpdateTime = t.UpdateTime;
             tmp.Type = t.Type;
             tmp.North = t.North;
+            tmp.Action = t.Action;
             tmp.IsApproach = CheckTargetApproach(tmp.Track.Last().Point, longitude, latitude);
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
 
@@ -2607,6 +2672,7 @@ namespace YimaWF
             }
             tmp = new Target(t.ID, t.Course, t.Speed, TargetSource.Merge);
             tmp.ArriveTime = t.ArriveTime;
+            tmp.ArrivePlatformTime = t.ArrivePlatformTime;
             tmp.AISType = t.AISType;
             tmp.CallSign = t.CallSign;
             tmp.Capacity = t.Capacity;
@@ -2624,6 +2690,8 @@ namespace YimaWF
             tmp.North = t.North;
             tmp.DataType = t.DataType;
             tmp.SrcNum = t.SrcNum;
+            tmp.Action = t.Action;
+
             if (t.Alarm != AlarmType.None)
             {
                 tmp.Alarm = t.Alarm;
@@ -2635,6 +2703,10 @@ namespace YimaWF
             MergeTargetDic.Add(t.ID, tmp);
             AllTargetList.Add(tmp);
             MergeTargetList.Add(tmp);
+            if (tmp.Action != AlarmAction.None)
+            {
+                GetAlarm?.Invoke((int)tmp.Action, tmp);
+            }
             return true;
         }
 
@@ -2647,6 +2719,7 @@ namespace YimaWF
                 return false;
             }
             tmp.ArriveTime = t.ArriveTime;
+            tmp.ArrivePlatformTime = t.ArrivePlatformTime;
             tmp.AISType = t.AISType;
             tmp.CallSign = t.CallSign;
             tmp.Capacity = t.Capacity;
@@ -2665,10 +2738,14 @@ namespace YimaWF
             tmp.North = t.North;
             tmp.DataType = t.DataType;
             tmp.SrcNum = t.SrcNum;
+            tmp.Action = t.Action;
             tmp.IsApproach = CheckTargetApproach(tmp.Track.Last().Point, longitude, latitude);
             UpdateAlarmStatus(tmp, t.Alarm, t.AlarmID, t.AlarmTime);
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
-
+            if (tmp.Action != AlarmAction.None)
+            {
+                GetAlarm?.Invoke((int)tmp.Action, tmp);
+            }
             return true;
         }
 
@@ -2882,8 +2959,8 @@ namespace YimaWF
         {
             //鼠标当前位置会有偏差（状态栏导致？），需要修正
             Point p = PointToClient(Control.MousePosition);
-            p.X -= 8;
-            p.Y -= 29;
+            //p.X -= 8;
+            //p.Y -= 29;
             return p;
         }
 

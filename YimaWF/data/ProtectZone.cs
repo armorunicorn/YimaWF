@@ -15,13 +15,21 @@ namespace YimaWF.data
         /// 半径，单位米
         /// </summary>
         public float Radius;
-        public Color ContentColor;
+        private Color contentColor;
+        public Color ContentColor
+        {
+            get { return contentColor; }
+            set
+            {
+                contentColor = Color.FromArgb(50, value);
+            }
+        }
 
         public ProtectZone(GeoPoint p, float r, Color c)
         {
             Center = p;
             Radius = r;
-            ContentColor = Color.FromArgb(50, c);
+            ContentColor = c;
         }
 
         public int ID;
