@@ -37,7 +37,7 @@ namespace YimaWF
         private static int MaxProtectZoneNum = 5;
         private static int MaxPipelineZoneNum = 5;
         private static int MinPipelineZoneID = 221;
-        private static short MaxShowTargetTime = 30;
+        private static short MaxShowTargetTime = 15;
 
         public AxYimaEnc YimaEnc;
 
@@ -145,7 +145,7 @@ namespace YimaWF
         #region 光电相关
         private Color oScanColor = Color.FromArgb(100, 227, 207, 87);
         //光电设备当前的角度
-        private int optStartAngle = 50;
+        private int optStartAngle = 180;
         private int optStep = 1;
         //光电设备扫描的
         private int optMaxAngle = 170;
@@ -165,8 +165,8 @@ namespace YimaWF
         public bool showAISTarget = true;
         public bool showRadar = true;
         public bool showOpt = true; //光电扫描线
-        public bool showTrack = true;
-        public bool showSpeedLine = true; //AIS目标速度线
+        public bool showTrack = false;
+        public bool showSpeedLine = false; //AIS目标速度线
         #endregion
 
         #region 数据回放
@@ -518,7 +518,7 @@ namespace YimaWF
                 if (t.ShowSignTime == 0)
                 {
                     //显示简略信息（船名、航向角、速度、到达时间）
-                    //statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts\n{3}", t.Name, t.Course, t.Speed, t.ArriveTime);
+                    //statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} 节\n{3}", t.Name, t.Course, t.Speed, t.ArriveTime);
                     //根据配置显示信息
                     if (t.ShowStatus)
                     {
@@ -529,7 +529,7 @@ namespace YimaWF
                         if (AppConfig.ShowTargetCourse)
                             statusStr += string.Format("{0:F2}°\n", t.Course);
                         if (AppConfig.ShowTargetSpeed)
-                            statusStr += string.Format("{0:F2} kts\n", t.Speed);
+                            statusStr += string.Format("{0:F2} 节\n", t.Speed);
                         if (AppConfig.ShowTargetArriveTime)
                             statusStr += string.Format("{0}\n", t.ArrivePlatformTime);
                         if (t.IsSelected)
@@ -538,7 +538,7 @@ namespace YimaWF
                         }
                         else
                         {
-                            //statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} kts", t.CallSign, 360 - t.Heading, t.Speed);
+                            //statusStr = string.Format("{0}\n{1:F2}°\n{2:F2} 节", t.CallSign, 360 - t.Heading, t.Speed);
                             statusBrush = Brushes.Black;
                         }
                         size = g.MeasureString(statusStr, AppConfig.TargetStatusFont);
@@ -556,10 +556,9 @@ namespace YimaWF
                 else
                 {
                     //显示基础信息（小标牌）——目标来源、船名、国籍、呼号、MIMSI、IMO、航向角、速度
-                    statusStr = string.Format("{0} {1} {2} {3}\nMMSI:{4}\nIMO:{5}\n{6:F2}° {7:F2} kts",
+                    statusStr = string.Format("{0} {1} {2} {3}\n距离:{4}\n{5:F2}° {6:F2} 节",
                         t.Source.ToString(), t.Name, t.Nationality, t.CallSign,
-                        t.MIMSI,
-                        t.IMO,
+                        t.Distance,
                         t.Course, t.Speed);
                     size = g.MeasureString(statusStr, AppConfig.TargetStatusFont);
                     statusRect = new RectangleF(B.X - size.Width - 20, A.Y - 8 - 10, size.Width, size.Height);
@@ -874,11 +873,13 @@ namespace YimaWF
         {
             base.OnMouseWheel(e);
 
-            
+
 
             //if (IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) || IsOnOperation(CURRENT_SUB_OPERATION.SHOWING_TRACK)
             //    || IsOnOperation(CURRENT_SUB_OPERATION.PLAYBACK) || IsOnOperation(CURRENT_SUB_OPERATION.RANGING))
-           // {
+            // {
+            if (this.Bounds.Contains(GetCursorPoint()))
+            {
                 if (e.Delta > 0)
                 {
                     axYimaEnc.SetCurrentScale(axYimaEnc.GetCurrentScale() / (float)1.5);
@@ -888,10 +889,11 @@ namespace YimaWF
                     axYimaEnc.SetCurrentScale(axYimaEnc.GetCurrentScale() * (float)1.5);
                 }
                 RefreshScaleStatusBar();
-            //radius = axYimaEnc.GetScrnLenFromGeoLen(geoRadius);
-            //更新雷达半径的长度
+                //radius = axYimaEnc.GetScrnLenFromGeoLen(geoRadius);
+                //更新雷达半径的长度
                 RefreshRadarRadius();
                 Invalidate();
+            }
          //   }
         }
 
@@ -1356,11 +1358,18 @@ namespace YimaWF
                     // 画角度值  
                     //g.DrawString(angle.ToString("0") + "°", this.Font, Brushes.Gray, endPoint);
                     // 把要画的字符串提出来便于操作  
-                    string angleString = angle.ToString("0") + "°";
-
+                    string angleString = null;
+                    if(angle == 90 || angle == 270)
+                    {
+                        double length = radar.GeoRadius / 1000 / 1000 / 1.852;
+                        angleString = string.Format("{0:0}°, {1:F2} 海里", angle, length);
+                    }
+                    else
+                    {
+                        angleString = angle.ToString("0") + "°";
+                    }
                     // 画角度值，如果文字在90-270度区间内，  
                     PointF textPoint = endPoint;
-
                     if (angle == 270)
                         textPoint.Y -= TextRenderer.MeasureText(angleString, this.Font).Height; // 用TextRenderer测量字符串大小  
                     else if (angle < 270 && angle > 90)
@@ -1380,6 +1389,7 @@ namespace YimaWF
         #region 光电绘图函数
         private void drawOptScan(Graphics g, int angle)
         {
+            angle = angle - 90;
             int scanAngle = optScanAngle;
             PointF point1 = new PointF();
             PointF point2 = new PointF();
@@ -1897,7 +1907,7 @@ namespace YimaWF
 
         public void StartHandRoam()
         {
-            if(IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION))
+            if(IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) || IsOnOperation(CURRENT_SUB_OPERATION.SHOWING_TRACK))
                 SetOperation(CURRENT_SUB_OPERATION.HAND_ROAM);
         }
         
@@ -2455,6 +2465,8 @@ namespace YimaWF
         //雷达角度设置
         public void SetRadarAngle(int angle, int ID)
         {
+            if (angle < 0 || angle > 360)
+                return;
             Radar radar = GetRadar(ID);
             if (radar != null)
                 radar.CurAngle = angle;
@@ -2464,6 +2476,8 @@ namespace YimaWF
         public void SetRadarRadius(int radius, int ID)
         {
             //geoRadius = radius;
+            if (radius <= 0)
+                return;
             Radar radar = GetRadar(ID);
             if (radar != null)
                 radar.GeoRadius = radius;
@@ -2473,17 +2487,32 @@ namespace YimaWF
         //光电角度设置
         public void SetOptAngle(int angle)
         {
-
+            if (angle > 180 || angle < -180)
+                return;
+            int halfScanAngle = optScanAngle;
+            if(angle < 0)
+            {
+                angle = angle + 360;
+            }
+            angle -= halfScanAngle;
+            if(angle < 0)
+            {
+                angle += 360;
+            }
+            optStartAngle = angle;
         }
         //光电扫描半径设置，单位毫米
         public void SetOptRadius(int radius)
         {
-            optGeoRadius = radius;
+            if(radius > 0)
+                optGeoRadius = radius;
         }
         //光电扫描宽度设定
         public void SetOptScanAngle(int angle)
         {
-            optScanAngle = angle;
+            if (angle < 0 || angle > 180)
+                return;
+            optScanAngle = angle / 2;
         }
         #endregion
 
@@ -2507,6 +2536,7 @@ namespace YimaWF
             tmp.ArriveTime = t.ArriveTime;
             tmp.ArrivePlatformTime = t.ArrivePlatformTime;
             tmp.North = t.North;
+            tmp.ShowTrack = showTrack;
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             radar.TargetMap.Add(tmp.ID, tmp);
             RadarTargetList.Add(tmp);
@@ -2518,7 +2548,9 @@ namespace YimaWF
         {
             Target tmp = GetRadarTarget(t.RadarID, t.ID);
             if (tmp == null)
-                return false;
+            {
+                return AddRadarTarget(t, longitude, latitude);
+            }
             tmp.Course = t.Course;
             tmp.Speed = t.Speed;
             tmp.UpdateTime = t.UpdateTime;
@@ -2595,6 +2627,8 @@ namespace YimaWF
             tmp.Type = t.Type;
             tmp.North = t.North;
             tmp.Action = t.Action;
+            tmp.ShowTrack = showTrack;
+            tmp.ShowSpeedLine = showSpeedLine;
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             AISTargetDic.Add(t.ID, tmp);
             AllTargetList.Add(tmp);
@@ -2607,8 +2641,8 @@ namespace YimaWF
             Target tmp;
             if (!AISTargetDic.TryGetValue(t.ID, out tmp))
             {
-                //目标不存在
-                return false;
+                //目标不存在则添加目标
+                return AddRadarTarget(t, longitude, latitude);
             }
             tmp.ArriveTime = t.ArriveTime;
             tmp.ArrivePlatformTime = t.ArrivePlatformTime;
@@ -2691,7 +2725,7 @@ namespace YimaWF
             tmp.DataType = t.DataType;
             tmp.SrcNum = t.SrcNum;
             tmp.Action = t.Action;
-
+            tmp.ShowTrack = showTrack;
             if (t.Alarm != AlarmType.None)
             {
                 tmp.Alarm = t.Alarm;
@@ -2715,8 +2749,8 @@ namespace YimaWF
             Target tmp;
             if (!MergeTargetDic.TryGetValue(t.ID, out tmp))
             {
-                //目标不存在
-                return false;
+                //目标不存在则添加目标
+                return AddMergeTarget(t, longitude, latitude);
             }
             tmp.ArriveTime = t.ArriveTime;
             tmp.ArrivePlatformTime = t.ArrivePlatformTime;
@@ -2812,13 +2846,14 @@ namespace YimaWF
                 if (fArcByDegree >= 0)
                 {
                     //Console.WriteLine(fArcByDegree);
-                    retDegreeString = string.Format("{0:D3}度{1:000000.000}分E", (int)fArcByDegree,
+                    //°12’12”
+                    retDegreeString = string.Format("{0:D3}°{1:.000}’E", (int)fArcByDegree,
                         60 * (fArcByDegree % 1));
                 }
                 else
                 {
                     fArcByDegree = -fArcByDegree;
-                    retDegreeString = string.Format("{0:D3}度{1:000000.000}分W", (int)fArcByDegree,
+                    retDegreeString = string.Format("{0:D3}°{1:.000}’W", (int)fArcByDegree,
                         60 * (fArcByDegree - (int)fArcByDegree));
                 }
             }
@@ -2826,13 +2861,13 @@ namespace YimaWF
             {
                 if (fArcByDegree >= 0)
                 {
-                    retDegreeString = string.Format("{0:D3}度{1:000000.000}分N", (int)fArcByDegree,
+                    retDegreeString = string.Format("{0:D3}°{1:.000}’N", (int)fArcByDegree,
                         60 * (fArcByDegree - (int)fArcByDegree));
                 }
                 else
                 {
                     fArcByDegree = -fArcByDegree;
-                    retDegreeString = string.Format("{0:D3}度{1:000000.000}分S", (int)fArcByDegree,
+                    retDegreeString = string.Format("{0:D3}°{1:.000}’S", (int)fArcByDegree,
                         60 * (fArcByDegree - (int)fArcByDegree));
                 }
             }

@@ -124,7 +124,6 @@
             // 
             // TargetDataTimer
             // 
-            this.TargetDataTimer.Interval = 50;
             this.TargetDataTimer.Tick += new System.EventHandler(this.TargetDataTimer_Tick);
             // 
             // targetContextMenu
@@ -134,12 +133,12 @@
             this.ShowTrackMenuItem,
             this.TargetCenterToolStripMenuItem});
             this.targetContextMenu.Name = "targetContextMenu";
-            this.targetContextMenu.Size = new System.Drawing.Size(153, 92);
+            this.targetContextMenu.Size = new System.Drawing.Size(149, 70);
             // 
             // ShowDetail
             // 
             this.ShowDetail.Name = "ShowDetail";
-            this.ShowDetail.Size = new System.Drawing.Size(152, 22);
+            this.ShowDetail.Size = new System.Drawing.Size(148, 22);
             this.ShowDetail.Text = "目标详细信息";
             this.ShowDetail.Click += new System.EventHandler(this.ShowDetail_Click);
             // 
@@ -148,14 +147,14 @@
             this.ShowTrackMenuItem.Checked = true;
             this.ShowTrackMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.ShowTrackMenuItem.Name = "ShowTrackMenuItem";
-            this.ShowTrackMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.ShowTrackMenuItem.Size = new System.Drawing.Size(148, 22);
             this.ShowTrackMenuItem.Text = "显示航迹";
             this.ShowTrackMenuItem.Click += new System.EventHandler(this.ShowTrackMenuItem_Click);
             // 
             // TargetCenterToolStripMenuItem
             // 
             this.TargetCenterToolStripMenuItem.Name = "TargetCenterToolStripMenuItem";
-            this.TargetCenterToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.TargetCenterToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.TargetCenterToolStripMenuItem.Text = "目标归心";
             this.TargetCenterToolStripMenuItem.Click += new System.EventHandler(this.TargetCenterToolStripMenuItem_Click);
             // 
@@ -178,7 +177,7 @@
             this.ShowAISTargetStatusToolStripMenuItem,
             this.ShowMergeTargetStatusToolStripMenuItem});
             this.normalContextMenu.Name = "normalContextMenu";
-            this.normalContextMenu.Size = new System.Drawing.Size(173, 224);
+            this.normalContextMenu.Size = new System.Drawing.Size(173, 246);
             // 
             // ShowRadarTargetItem
             // 
@@ -227,8 +226,6 @@
             // 
             // ShowAllTrackToolStripMenuItem
             // 
-            this.ShowAllTrackToolStripMenuItem.Checked = true;
-            this.ShowAllTrackToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.ShowAllTrackToolStripMenuItem.Name = "ShowAllTrackToolStripMenuItem";
             this.ShowAllTrackToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
             this.ShowAllTrackToolStripMenuItem.Text = "航迹显示";
@@ -236,8 +233,6 @@
             // 
             // ShowSpeedLineToolStripMenuItem
             // 
-            this.ShowSpeedLineToolStripMenuItem.Checked = true;
-            this.ShowSpeedLineToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.ShowSpeedLineToolStripMenuItem.Name = "ShowSpeedLineToolStripMenuItem";
             this.ShowSpeedLineToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
             this.ShowSpeedLineToolStripMenuItem.Text = "航首线显示";

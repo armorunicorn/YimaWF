@@ -158,7 +158,7 @@ namespace YimaWF.data
         #endregion
 
         #region AIS数据
-        public bool ShowSpeedLine = true;
+        public bool ShowSpeedLine = false;
         public uint IMO { get; set; }
         public string MIMSI { get; set; }
         public string CallSign { get; set; }
