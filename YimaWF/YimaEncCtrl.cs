@@ -163,10 +163,13 @@ namespace YimaWF
         public bool showRadarTarget = true;
         public bool showMergeTarget = true;
         public bool showAISTarget = true;
-        public bool showRadar = true;
+        public bool showRadar = false;
         public bool showOpt = true; //光电扫描线
         public bool showTrack = false;
         public bool showSpeedLine = false; //AIS目标速度线
+        public bool ShowRadarTargetStatus = true;
+        public bool ShowAISTargetStatus = true;
+        public bool ShowMergeTargetStatus = true;
         #endregion
 
         #region 数据回放
@@ -555,11 +558,32 @@ namespace YimaWF
                 }
                 else
                 {
-                    //显示基础信息（小标牌）——目标来源、船名、国籍、呼号、MIMSI、IMO、航向角、速度
-                    statusStr = string.Format("{0} {1} {2} {3}\n距离:{4}\n{5:F2}° {6:F2} 节",
-                        t.Source.ToString(), t.Name, t.Nationality, t.CallSign,
-                        t.Distance,
-                        t.Course, t.Speed);
+                    //显示基础信息（小标牌）——目标来源、船名、国籍、呼号、距离、航向角、速度
+                    if (t.Source == TargetSource.AIS)
+                    {
+                        //AIS基础信息（小标牌）——目标来源、船名、国籍、MMSI、航向角、速度
+                        statusStr = string.Format("{0} {1} {2}\nMMSI:{3}\n{4:F2}° {5:F2} 节",
+                            t.Source.ToString(), t.Name, t.Nationality,
+                            t.ID,
+                            t.Course, t.Speed);
+                    }
+                    else if(t.Source == TargetSource.Radar)
+                    {
+                        //雷达小标牌：目标来源，雷达批号，距离，航向角，对地速度
+                        statusStr = string.Format("{0} {1}\n距离:{2} 米\n{3:F2}° {4:F2} 节",
+                            t.Source.ToString(), t.ID,
+                            t.Distance,
+                            t.Course, t.Speed);
+                    }
+                    else
+                    {
+                        //融合小标牌：融合批号，船名，国籍，MMSI，雷达批号，航向角，对地速度
+                        statusStr = string.Format("{0} {1} {2}\nMMSI:{3}\n雷达批号: {4}\n{5:F2}° {6:F2} 节",
+                            t.Source.ToString(), t.ID, t.Name,
+                            t.MIMSI,
+                            t.RadarBatchNum,
+                            t.Course, t.Speed);
+                    }
                     size = g.MeasureString(statusStr, AppConfig.TargetStatusFont);
                     statusRect = new RectangleF(B.X - size.Width - 20, A.Y - 8 - 10, size.Width, size.Height);
                     statusBrush = new SolidBrush(Color.FromArgb(255, Color.BurlyWood));
@@ -597,7 +621,8 @@ namespace YimaWF
                         //Console.WriteLine("------------------------");
                         pen.Width = 3;
                         pen.DashStyle = DashStyle.Dot;
-                        g.DrawCurve(pen, list.ToArray());
+                        //g.DrawCurve(pen, list.ToArray());
+                        g.DrawLines(pen, list.ToArray());
                     }
                     else
                     {
@@ -747,7 +772,7 @@ namespace YimaWF
                 //标志
                 float len = (float)RangingPoingList[count].LenToLastPoing / 1000 / 1000;
                 if (count >= 1)
-                    str = string.Format("{0:F2} km", len);
+                    str = string.Format("{0:F2} 海里", KM2NM(len));
                 else
                     str = "起点";
                 if(IsOnOperation(CURRENT_SUB_OPERATION.RANGED))
@@ -755,7 +780,7 @@ namespace YimaWF
                     totalLen += len;
                     if(count == list.Count - 1)
                     {
-                        str = string.Format("{0:F2} km\n总长 {1:F2} km", len, totalLen);
+                        str = string.Format("{0:F2} 海里\n总长 {1:F2} 海里", KM2NM(len), KM2NM(totalLen));
                     }
                 }
                 SizeF size = g.MeasureString(str, AppConfig.RangFont);
@@ -772,7 +797,7 @@ namespace YimaWF
                 axYimaEnc.GetGeoPoFromScrnPo(p.X, p.Y, ref curX, ref curY);
                 int lenmm = GetGeoLenFromGeoPoint(RangingPoingList.Last().Point, new GeoPoint(curX, curY));
                 float lenkm = (float)lenmm / 1000 / 1000;
-                str = string.Format("{0:F2} km", lenkm);
+                str = string.Format("{0:F2} 海里", KM2NM(lenkm));
                 SizeF size = g.MeasureString(str, AppConfig.RangFont);
                 RectangleF strRect = new RectangleF(p.X + 20, p.Y + 4, size.Width, size.Height);
                 g.FillRectangle(Brushes.White, strRect);
@@ -1003,16 +1028,21 @@ namespace YimaWF
             if (e.Button == MouseButtons.Left)
             {
                 //先将当前目标重置
-                if (CurSelectedTarget != null)
+                /*if (t == null && CurSelectedTarget != null)
                 {
                     CurSelectedTarget.IsSelected = false;
                     CurSelectedTarget.ShowSignTime = 0;
                     CurSelectedTarget = null;
                     isInvalidate = true;
-                }
+                }*/
                 if (t != null)
                 {
                     //替换当前选中的目标
+                    if (CurSelectedTarget != null)
+                    {
+                        CurSelectedTarget.IsSelected = false;
+                        CurSelectedTarget.ShowSignTime = 0;
+                    }
                     CurSelectedTarget = t;
                     t.IsSelected = true;
                     t.ShowSignTime = MaxShowTargetTime;
@@ -1096,6 +1126,19 @@ namespace YimaWF
                 {
                     SetOperation(CURRENT_SUB_OPERATION.RANGED);
                     ClearOperation(CURRENT_SUB_OPERATION.RANGING);
+                }
+                else
+                {
+                    var t = GetClickTarget(e.Location);
+                    if(t != null)
+                    {
+                        TargetCenter(t);
+                        //CurSelectedTarget = t;
+                        //t.IsSelected = true;
+                        //t.ShowSignTime = MaxShowTargetTime;
+                        
+                        //TargetSelect?.Invoke(t);
+                    }
                 }
             }
         }
@@ -1361,7 +1404,7 @@ namespace YimaWF
                     string angleString = null;
                     if(angle == 90 || angle == 270)
                     {
-                        double length = radar.GeoRadius / 1000 / 1000 / 1.852;
+                        double length = KM2NM(radar.GeoRadius / 1000 / 1000);
                         angleString = string.Format("{0:0}°, {1:F2} 海里", angle, length);
                     }
                     else
@@ -1496,7 +1539,8 @@ namespace YimaWF
         private void ShowRadarTargetStatusToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ShowRadarTargetStatusToolStripMenuItem.Checked = !ShowRadarTargetStatusToolStripMenuItem.Checked;
-            foreach(var t in RadarTargetList)
+            ShowRadarTargetStatus = ShowRadarTargetStatusToolStripMenuItem.Checked;
+            foreach (var t in RadarTargetList)
             {
                 t.ShowStatus = ShowRadarTargetStatusToolStripMenuItem.Checked;
             }
@@ -1504,6 +1548,7 @@ namespace YimaWF
         private void ShowAISTargetStatusToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ShowAISTargetStatusToolStripMenuItem.Checked = !ShowAISTargetStatusToolStripMenuItem.Checked;
+            ShowAISTargetStatus = ShowAISTargetStatusToolStripMenuItem.Checked;
             foreach (var t in AISTargetList)
             {
                 t.ShowStatus = ShowAISTargetStatusToolStripMenuItem.Checked;
@@ -1513,6 +1558,7 @@ namespace YimaWF
         private void ShowMergeTargetStatusToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ShowMergeTargetStatusToolStripMenuItem.Checked = !ShowMergeTargetStatusToolStripMenuItem.Checked;
+            ShowMergeTargetStatus = ShowMergeTargetStatusToolStripMenuItem.Checked;
             foreach (var t in MergeTargetList)
             {
                 t.ShowStatus = ShowMergeTargetStatusToolStripMenuItem.Checked;
@@ -2537,6 +2583,7 @@ namespace YimaWF
             tmp.ArrivePlatformTime = t.ArrivePlatformTime;
             tmp.North = t.North;
             tmp.ShowTrack = showTrack;
+            tmp.ShowStatus = ShowRadarTargetStatus;
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             radar.TargetMap.Add(tmp.ID, tmp);
             RadarTargetList.Add(tmp);
@@ -2596,6 +2643,23 @@ namespace YimaWF
             }
             return tmp;
         }
+
+        public void DeleteAllRadarTarget()
+        {
+            for(int i = 1; i <= 2; i++)
+            {
+                Radar radar = GetRadar(i);
+                if (radar == null)
+                    //雷达ID错误
+                    return;
+                foreach(Target t in radar.TargetMap.Values)
+                {
+                    RemoveTargetFromList(t, AllTargetList);
+                }
+                radar.TargetMap.Clear();
+            }
+            RadarTargetList.Clear();
+        }
         #endregion
 
 
@@ -2629,6 +2693,7 @@ namespace YimaWF
             tmp.Action = t.Action;
             tmp.ShowTrack = showTrack;
             tmp.ShowSpeedLine = showSpeedLine;
+            tmp.ShowStatus = ShowAISTargetStatus;
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             AISTargetDic.Add(t.ID, tmp);
             AllTargetList.Add(tmp);
@@ -2683,6 +2748,16 @@ namespace YimaWF
             return true;
         }
 
+        public void DeleteAllAISTarget()
+        {
+            foreach(Target t in AISTargetList)
+            {
+                RemoveTargetFromList(t, AllTargetList);
+            }
+            AISTargetList.Clear();
+            AISTargetDic.Clear();
+        }
+
         public Target GetAISTarget(int id)
         {
             Target tmp = null;
@@ -2726,6 +2801,8 @@ namespace YimaWF
             tmp.SrcNum = t.SrcNum;
             tmp.Action = t.Action;
             tmp.ShowTrack = showTrack;
+            tmp.ShowStatus = ShowMergeTargetStatus;
+            tmp.RadarBatchNum = t.RadarBatchNum;
             if (t.Alarm != AlarmType.None)
             {
                 tmp.Alarm = t.Alarm;
@@ -2764,6 +2841,7 @@ namespace YimaWF
             tmp.IMO = t.IMO;
             tmp.MaxDeep = t.MaxDeep;
             tmp.MIMSI = t.MIMSI;
+            tmp.RadarBatchNum = t.RadarBatchNum;
             tmp.Name = t.Name;
             tmp.Nationality = t.Nationality;
             tmp.SailStatus = t.SailStatus;
@@ -2797,6 +2875,16 @@ namespace YimaWF
             if (tmp.Alarm != AlarmType.None)
                 RemoveTargetFromList(tmp, AlarmTargetList);
             return true;
+        }
+
+        public void DeleteAllMergeTarget()
+        {
+            foreach (Target t in MergeTargetList)
+            {
+                RemoveTargetFromList(t, AllTargetList);
+            }
+            MergeTargetList.Clear();
+            MergeTargetDic.Clear();
         }
 
         public Target GetMergeTarget(int id)
@@ -3006,6 +3094,12 @@ namespace YimaWF
             list.Add((double)gp.x / iGeoCoorMultiFactor);
             list.Add((double)gp.y / iGeoCoorMultiFactor);
             return list;
+        }
+
+
+        private double KM2NM(double km)
+        {
+            return km / 1.852;
         }
     }
 }

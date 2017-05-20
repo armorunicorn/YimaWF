@@ -208,8 +208,6 @@
             // 
             // ShowRadarMenuItem
             // 
-            this.ShowRadarMenuItem.Checked = true;
-            this.ShowRadarMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.ShowRadarMenuItem.Name = "ShowRadarMenuItem";
             this.ShowRadarMenuItem.Size = new System.Drawing.Size(172, 22);
             this.ShowRadarMenuItem.Text = "雷达扫描线";

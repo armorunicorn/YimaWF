@@ -154,7 +154,9 @@ namespace YimaWF.data
         }
 
         #region 雷达数据
+        //雷达ID
         public int RadarID { get; set; }
+        public int RadarBatchNum { get; set; }
         #endregion
 
         #region AIS数据
@@ -227,6 +229,17 @@ namespace YimaWF.data
             {
                 alarm = value;
                 NotifyPropertyChanged("Alarm");
+            }
+        }
+
+        private bool alarmCheck;
+        public bool AlarmCheck
+        {
+            get { return alarmCheck; }
+            set
+            {
+                alarmCheck = value;
+                NotifyPropertyChanged("AlarmCheck");
             }
         }
 
