@@ -160,7 +160,6 @@
             // 
             // RadarTimer
             // 
-            this.RadarTimer.Interval = 27;
             this.RadarTimer.Tick += new System.EventHandler(this.RadarTimer_Tick);
             // 
             // normalContextMenu
@@ -177,7 +176,7 @@
             this.ShowAISTargetStatusToolStripMenuItem,
             this.ShowMergeTargetStatusToolStripMenuItem});
             this.normalContextMenu.Name = "normalContextMenu";
-            this.normalContextMenu.Size = new System.Drawing.Size(173, 246);
+            this.normalContextMenu.Size = new System.Drawing.Size(173, 224);
             // 
             // ShowRadarTargetItem
             // 

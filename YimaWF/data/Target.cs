@@ -266,6 +266,9 @@ namespace YimaWF.data
             }
         }
         public int AlarmID { get; set; }
+
+        public int RadarID2 { get; set; }
+        public int RadarBatchNum2 { get; set; }
         #endregion
 
 

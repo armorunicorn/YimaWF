@@ -217,7 +217,7 @@ namespace YimaWF
             axYimaEnc.AfterDrawMap += AxYimaEnc_AfterDrawMap;
             RefreshScaleStatusBar();
             //axYimaEnc.DrawRadar += AxYimaEnc_DrawRadar;
-            RadarTimer.Enabled = false;
+            RadarTimer.Enabled = true;
             TargetDataTimer.Enabled = true;
 
             //加载平台图片
@@ -245,6 +245,7 @@ namespace YimaWF
             radar1.ID = 1;
             radar1.CurAngle = 0;
             radar1.GeoRadius = 20000000;
+            radar1.AnglePer100ms = 3.6;
             radar1.ScanColor = Color.FromArgb(0, 255, 0);
             radar1.Radius = axYimaEnc.GetScrnLenFromGeoLen(radar1.GeoRadius);
             //雷达2初始化
@@ -252,6 +253,7 @@ namespace YimaWF
             radar2.ID = 2;
             radar2.CurAngle = 180;
             radar2.GeoRadius = 20000000;
+            radar2.AnglePer100ms = 3.6;
             radar2.ScanColor = Color.FromArgb(0, 255, 255);
             radar2.Radius = axYimaEnc.GetScrnLenFromGeoLen(radar2.GeoRadius);
         }
@@ -518,6 +520,18 @@ namespace YimaWF
                 Brush statusBrush;
                 RectangleF statusRect;
                 SizeF size;
+                if(t.ShowSignTime != 0 && !t.IsSelected)
+                {
+                    t.ShowSignTime = 0;
+                }
+                if(t.IsSelected)
+                {
+                    if(!t.Equals(CurSelectedTarget))
+                    {
+                        t.IsSelected = false;
+                    }
+                }
+
                 if (t.ShowSignTime == 0)
                 {
                     //显示简略信息（船名、航向角、速度、到达时间）
@@ -570,18 +584,19 @@ namespace YimaWF
                     else if(t.Source == TargetSource.Radar)
                     {
                         //雷达小标牌：目标来源，雷达批号，距离，航向角，对地速度
-                        statusStr = string.Format("{0} {1}\n距离:{2} 米\n{3:F2}° {4:F2} 节",
-                            t.Source.ToString(), t.ID,
+                        statusStr = string.Format("{0}{1} {2}\n距离:{3} 米\n{4:F2}° {5:F2} 节",
+                            t.Source.ToString(), t.RadarID, t.ID,
                             t.Distance,
                             t.Course, t.Speed);
                     }
                     else
                     {
                         //融合小标牌：融合批号，船名，国籍，MMSI，雷达批号，航向角，对地速度
-                        statusStr = string.Format("{0} {1} {2}\nMMSI:{3}\n雷达批号: {4}\n{5:F2}° {6:F2} 节",
+                        statusStr = string.Format("{0} {1} {2}\nMMSI:{3}\n雷达{4}: {5}\n雷达{6}: {7}\n{8:F2}° {9:F2} 节",
                             t.Source.ToString(), t.ID, t.Name,
                             t.MIMSI,
-                            t.RadarBatchNum,
+                            t.RadarID, t.RadarBatchNum,
+                            t.RadarID2, t.RadarBatchNum2,
                             t.Course, t.Speed);
                     }
                     size = g.MeasureString(statusStr, AppConfig.TargetStatusFont);
@@ -1216,12 +1231,9 @@ namespace YimaWF
                 if(CurSelectedTarget.ShowSignTime > 0)
                     CurSelectedTarget.ShowSignTime--;
             //自动设置雷达扫描的角度
-            radar1.CurAngle++;
-            if (radar1.CurAngle > 360)
-                radar1.CurAngle = 0;
-            radar2.CurAngle++;
+            /*radar2.CurAngle++;
             if (radar2.CurAngle > 360)
-                radar2.CurAngle = 0;
+                radar2.CurAngle = 0;*/
             if (IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION) || IsOnOperation(CURRENT_SUB_OPERATION.SHOWING_TRACK)
                 || IsOnOperation(CURRENT_SUB_OPERATION.PLAYBACK) || !IsOnOperation(CURRENT_SUB_OPERATION.ROAMING))
                 Invalidate();
@@ -1231,7 +1243,7 @@ namespace YimaWF
 
         #region 雷达绘图函数
         private int optRate = 0;
-        private void RadarTimer_Tick(object sender, EventArgs e)
+        /*private void RadarTimer_Tick(object sender, EventArgs e)
         {
             if (!IsOnOperation(CURRENT_SUB_OPERATION.NO_OPERATION))
                 return;
@@ -1284,6 +1296,15 @@ namespace YimaWF
             g4.Dispose();
             b2.Dispose();
             //RadarTimer.Enabled = false;
+        }*/
+        private void RadarTimer_Tick(object sender, EventArgs e)
+        {
+            radar1.CurAngle += radar1.AnglePer100ms;
+            if (radar1.CurAngle > 360)
+                radar1.CurAngle -= 360;
+            radar2.CurAngle += radar2.AnglePer100ms;
+            if (radar2.CurAngle > 360)
+                radar2.CurAngle -= 360;
         }
 
 
@@ -1313,12 +1334,13 @@ namespace YimaWF
             PointF point3 = new PointF();
 
             int curX = 0, curY = 0;
+            int angle = Convert.ToInt32(radar.CurAngle);
             axYimaEnc.GetScrnPoFromGeoPo(platformGeoPo.x, platformGeoPo.y, ref curX, ref curY);
             Point center = new Point(curX, curY);
 
 
-            point1 = getMappedPoint(radar.CurAngle, max, curX, curY, radar.Radius);
-            int angle2 = (radar.CurAngle + scanAngle) > 360 ? (radar.CurAngle + scanAngle - 360) : (radar.CurAngle + scanAngle);
+            point1 = getMappedPoint(angle, max, curX, curY, radar.Radius);
+            int angle2 = (angle + scanAngle) > 360 ? (angle + scanAngle - 360) : (angle + scanAngle);
             point2 = getMappedPoint(angle2, max, curX, curY, radar.Radius);
             int angle3 = (angle2 + scanAngle) > 360 ? (angle2 + scanAngle - 360) : (angle2 + scanAngle);
             point3 = getMappedPoint(angle3, max, curX, curY, radar.Radius);
@@ -2528,6 +2550,14 @@ namespace YimaWF
             if (radar != null)
                 radar.GeoRadius = radius;
         }
+
+        public void SetRadarSpeed(double speed, int ID)
+        {
+            Radar r = GetRadar(ID);
+            if (r == null)
+                return;
+            r.AnglePer100ms = 36 * speed;
+        }
         #endregion
         #region 光电设置
         //光电角度设置
@@ -2707,7 +2737,7 @@ namespace YimaWF
             if (!AISTargetDic.TryGetValue(t.ID, out tmp))
             {
                 //目标不存在则添加目标
-                return AddRadarTarget(t, longitude, latitude);
+                return AddAISTarget(t, longitude, latitude);
             }
             tmp.ArriveTime = t.ArriveTime;
             tmp.ArrivePlatformTime = t.ArrivePlatformTime;
@@ -2803,6 +2833,7 @@ namespace YimaWF
             tmp.ShowTrack = showTrack;
             tmp.ShowStatus = ShowMergeTargetStatus;
             tmp.RadarBatchNum = t.RadarBatchNum;
+            tmp.RadarID = t.RadarID;
             if (t.Alarm != AlarmType.None)
             {
                 tmp.Alarm = t.Alarm;
@@ -2851,6 +2882,7 @@ namespace YimaWF
             tmp.DataType = t.DataType;
             tmp.SrcNum = t.SrcNum;
             tmp.Action = t.Action;
+            tmp.RadarID = t.RadarID;
             tmp.IsApproach = CheckTargetApproach(tmp.Track.Last().Point, longitude, latitude);
             UpdateAlarmStatus(tmp, t.Alarm, t.AlarmID, t.AlarmTime);
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
