@@ -124,6 +124,7 @@
             // 
             // TargetDataTimer
             // 
+            this.TargetDataTimer.Interval = 130;
             this.TargetDataTimer.Tick += new System.EventHandler(this.TargetDataTimer_Tick);
             // 
             // targetContextMenu

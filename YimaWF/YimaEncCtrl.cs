@@ -69,7 +69,7 @@ namespace YimaWF
         public ObservableCollection<Target> AlarmTargetList = new ObservableCollection<Target>();
 
         public Config AppConfig;
-
+        private object curSelectedTargetMutux = new object();
         public Target CurSelectedTarget { set; get; }
 
         public Target CurShowingTrackTarget;
@@ -520,7 +520,7 @@ namespace YimaWF
                 Brush statusBrush;
                 RectangleF statusRect;
                 SizeF size;
-                if(t.ShowSignTime != 0 && !t.IsSelected)
+                /*if(t.ShowSignTime != 0 && !t.IsSelected)
                 {
                     t.ShowSignTime = 0;
                 }
@@ -530,7 +530,7 @@ namespace YimaWF
                     {
                         t.IsSelected = false;
                     }
-                }
+                }*/
 
                 if (t.ShowSignTime == 0)
                 {
@@ -584,7 +584,7 @@ namespace YimaWF
                     else if(t.Source == TargetSource.Radar)
                     {
                         //雷达小标牌：目标来源，雷达批号，距离，航向角，对地速度
-                        statusStr = string.Format("{0}{1} {2}\n距离:{3} 米\n{4:F2}° {5:F2} 节",
+                        statusStr = string.Format("{0}{1} 批号: {2}\n距离:{3} 米\n{4:F2}° {5:F2} 节",
                             t.Source.ToString(), t.RadarID, t.ID,
                             t.Distance,
                             t.Course, t.Speed);
@@ -592,11 +592,11 @@ namespace YimaWF
                     else
                     {
                         //融合小标牌：融合批号，船名，国籍，MMSI，雷达批号，航向角，对地速度
-                        statusStr = string.Format("{0} {1} {2}\nMMSI:{3}\n雷达{4}: {5}\n雷达{6}: {7}\n{8:F2}° {9:F2} 节",
+                        statusStr = string.Format("{0} {1} {2}\nMMSI:{3}\n雷达1批号: {4}\n雷达2批号: {5}\n{6:F2}° {7:F2} 节",
                             t.Source.ToString(), t.ID, t.Name,
                             t.MIMSI,
-                            t.RadarID, t.RadarBatchNum,
-                            t.RadarID2, t.RadarBatchNum2,
+                            t.RadarBatchNum,
+                            t.RadarBatchNum2,
                             t.Course, t.Speed);
                     }
                     size = g.MeasureString(statusStr, AppConfig.TargetStatusFont);
@@ -1052,15 +1052,18 @@ namespace YimaWF
                 }*/
                 if (t != null)
                 {
-                    //替换当前选中的目标
-                    if (CurSelectedTarget != null)
+                    lock (curSelectedTargetMutux)
                     {
-                        CurSelectedTarget.IsSelected = false;
-                        CurSelectedTarget.ShowSignTime = 0;
+                        //替换当前选中的目标
+                        if (CurSelectedTarget != null)
+                        {
+                            CurSelectedTarget.IsSelected = false;
+                            CurSelectedTarget.ShowSignTime = 0;
+                        }
+                        CurSelectedTarget = t;
+                        t.IsSelected = true;
+                        t.ShowSignTime = MaxShowTargetTime;
                     }
-                    CurSelectedTarget = t;
-                    t.IsSelected = true;
-                    t.ShowSignTime = MaxShowTargetTime;
                     TargetSelect?.Invoke(t);
                     isInvalidate = true;
                 }
@@ -1108,15 +1111,18 @@ namespace YimaWF
                 {
                     if (t != null)
                     {
-                        if (CurSelectedTarget != null)
+                        lock (curSelectedTargetMutux)
                         {
-                            CurSelectedTarget.IsSelected = false;
-                            CurSelectedTarget.ShowSignTime = 0;
+                            if (CurSelectedTarget != null)
+                            {
+                                CurSelectedTarget.IsSelected = false;
+                                CurSelectedTarget.ShowSignTime = 0;
+                            }
+                            CurSelectedTarget = t;
+                            t.IsSelected = true;
+                            isInvalidate = true;
+                            ShowTrackMenuItem.Checked = t.ShowTrack;
                         }
-                        CurSelectedTarget = t;
-                        t.IsSelected = true;
-                        isInvalidate = true;
-                        ShowTrackMenuItem.Checked = t.ShowTrack;
                         targetContextMenu.Show(axYimaEnc, e.Location);
                         TargetSelect?.Invoke(t);
                     }
@@ -1227,9 +1233,12 @@ namespace YimaWF
 
         private void TargetDataTimer_Tick(object sender, EventArgs e)
         {
-            if (CurSelectedTarget != null)
-                if(CurSelectedTarget.ShowSignTime > 0)
-                    CurSelectedTarget.ShowSignTime--;
+            lock (curSelectedTargetMutux)
+            {
+                if (CurSelectedTarget != null)
+                    if (CurSelectedTarget.ShowSignTime > 0)
+                        CurSelectedTarget.ShowSignTime--;
+            }
             //自动设置雷达扫描的角度
             /*radar2.CurAngle++;
             if (radar2.CurAngle > 360)
@@ -1802,7 +1811,9 @@ namespace YimaWF
                 list.Add(curScanPoint);
                 //显示时间
                 Brush statusBrush = Brushes.Black;
-                Rectangle statusRect = new Rectangle(curX + TargetRectFactor, curY, 150, 20);
+                SizeF size;
+                size = g.MeasureString(p.Time, AppConfig.TargetStatusFont);
+                RectangleF statusRect = new RectangleF(curX + TargetRectFactor, curY, size.Height, size.Width);
 
 
                 g.DrawString(p.Time, AppConfig.TargetStatusFont, statusBrush, statusRect);
@@ -2026,17 +2037,20 @@ namespace YimaWF
         {
             if (t != null && !t.Equals(CurSelectedTarget))
             {
-                if (CurSelectedTarget != null)
+                lock (curSelectedTargetMutux)
                 {
-                    CurSelectedTarget.IsSelected = false;
-                    CurSelectedTarget.ShowSignTime = 0;
-                    CurSelectedTarget = null;
-                }
+                    if (CurSelectedTarget != null)
+                    {
+                        CurSelectedTarget.IsSelected = false;
+                        CurSelectedTarget.ShowSignTime = 0;
+                        CurSelectedTarget = null;
+                    }
 
-                //替换当前选中的目标
-                CurSelectedTarget = t;
-                t.IsSelected = true;
-                t.ShowSignTime = MaxShowTargetTime;
+                    //替换当前选中的目标
+                    CurSelectedTarget = t;
+                    t.IsSelected = true;
+                    t.ShowSignTime = MaxShowTargetTime;
+                }
             }
         }
 
@@ -2614,6 +2628,8 @@ namespace YimaWF
             tmp.North = t.North;
             tmp.ShowTrack = showTrack;
             tmp.ShowStatus = ShowRadarTargetStatus;
+            tmp.RadarBatchNum = t.RadarBatchNum;
+            tmp.RadarBatchNum2 = t.RadarBatchNum2;
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             radar.TargetMap.Add(tmp.ID, tmp);
             RadarTargetList.Add(tmp);
@@ -2635,6 +2651,8 @@ namespace YimaWF
             tmp.ArriveTime = t.ArriveTime;
             tmp.ArrivePlatformTime = t.ArrivePlatformTime;
             tmp.North = t.North;
+            tmp.RadarBatchNum = t.RadarBatchNum;
+            tmp.RadarBatchNum2 = t.RadarBatchNum2;
             tmp.IsApproach = CheckTargetApproach(tmp.Track.Last().Point, longitude, latitude);
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             return true;
@@ -2833,6 +2851,7 @@ namespace YimaWF
             tmp.ShowTrack = showTrack;
             tmp.ShowStatus = ShowMergeTargetStatus;
             tmp.RadarBatchNum = t.RadarBatchNum;
+            tmp.RadarBatchNum2 = t.RadarBatchNum2;
             tmp.RadarID = t.RadarID;
             if (t.Alarm != AlarmType.None)
             {
@@ -2883,6 +2902,8 @@ namespace YimaWF
             tmp.SrcNum = t.SrcNum;
             tmp.Action = t.Action;
             tmp.RadarID = t.RadarID;
+            tmp.RadarBatchNum = t.RadarBatchNum;
+            tmp.RadarBatchNum2 = t.RadarBatchNum2;
             tmp.IsApproach = CheckTargetApproach(tmp.Track.Last().Point, longitude, latitude);
             UpdateAlarmStatus(tmp, t.Alarm, t.AlarmID, t.AlarmTime);
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
