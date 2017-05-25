@@ -16,6 +16,14 @@ using System.Drawing.Imaging;
 using System.Resources;
 using YimaWF.Properties;
 using System.Collections.ObjectModel;
+using D2D1AlphaMode = SharpDX.Direct2D1.AlphaMode;
+using D2D1Device = SharpDX.Direct2D1.Device;
+using D2D1PixelFormat = SharpDX.Direct2D1.PixelFormat;
+using DeviceContext = SharpDX.Direct2D1.DeviceContext;
+using DXGIDevice = SharpDX.DXGI.Device;
+using DXGIFactory = SharpDX.DXGI.Factory;
+using Factory = SharpDX.Direct2D1.Factory;
+using PixelFormat = SharpDX.WIC.PixelFormat;
 
 namespace YimaWF
 {
@@ -78,13 +86,13 @@ namespace YimaWF
 
 
         //一些海图内部使用的全局变量
-        private Image plantformImg;
-        private Image largeTargetImg;
-        private Image alarmImg;
-        private Image alarm1Img;
-        private Image alarm2Img;
-        private Image alarm3Img;
-        private Image alarm4Img;
+        private System.Drawing.Image plantformImg;
+        private System.Drawing.Image largeTargetImg;
+        private System.Drawing.Image alarmImg;
+        private System.Drawing.Image alarm1Img;
+        private System.Drawing.Image alarm2Img;
+        private System.Drawing.Image alarm3Img;
+        private System.Drawing.Image alarm4Img;
         private ForbiddenZone curForbiddenZone;
         private Pipeline curPipeline;
         //目标图片切换的比例尺
@@ -125,7 +133,7 @@ namespace YimaWF
 
         #region 雷达相关
         //双timer中用来存储海图绘制出来的图片（没有雷达和光电）
-        private Bitmap backgroundBtm;
+        //private System.Drawing.Bitmap backgroundBtm;
         private Radar radar1;
         private Radar radar2;
 
@@ -178,6 +186,8 @@ namespace YimaWF
         //public Dictionary<int, Target> MergeTargetPlaybackDic = new Dictionary<int, Target>();
         #endregion
 
+
+        private SharpDX.Direct2D1.DeviceContextRenderTarget hwndRenderTarget;
         public YimaEncCtrl()
         {
             InitializeComponent();
@@ -231,6 +241,32 @@ namespace YimaWF
             alarm3Img = Resources.Alarm3;
             alarm4Img = Resources.Alarm4;
             //测试代码
+
+            Factory factory = new Factory(SharpDX.Direct2D1.FactoryType.SingleThreaded);
+
+            SharpDX.Direct2D1.RenderTargetProperties renderProps = new SharpDX.Direct2D1.RenderTargetProperties
+            {
+                PixelFormat = new D2D1PixelFormat(SharpDX.DXGI.Format.B8G8R8A8_UNorm, D2D1AlphaMode.Premultiplied),
+                Usage = SharpDX.Direct2D1.RenderTargetUsage.None,
+                Type = SharpDX.Direct2D1.RenderTargetType.Hardware
+            };
+
+            /*SharpDX.Direct2D1.HwndRenderTargetProperties hwndProps = new SharpDX.Direct2D1.HwndRenderTargetProperties()
+            {
+                // 承载控件的句柄。
+                Hwnd = axYimaEnc.Handle,
+                // 控件的尺寸。
+                PixelSize = new SharpDX.Size2(this.ClientSize.Width, this.ClientSize.Height),
+                PresentOptions = SharpDX.Direct2D1.PresentOptions.None
+            };*/
+
+
+            hwndRenderTarget = new SharpDX.Direct2D1.DeviceContextRenderTarget(factory, renderProps)
+            {
+                //AntialiasMode = SharpDX.Direct2D1.AntialiasMode.PerPrimitive
+            };
+            
+            this.DoubleBuffered = true;
         }
 
         private void AxYimaEnc_DrawRadar(object sender, EventArgs e)
@@ -286,6 +322,15 @@ namespace YimaWF
             int dc = axYimaEnc.GetDrawerHDC();
             IntPtr dcPtr = new IntPtr(dc);
             var g = Graphics.FromHdc(dcPtr);
+            hwndRenderTarget.BindDeviceContext(dcPtr, new SharpDX.Mathematics.Interop.RawRectangle(0, 0, axYimaEnc.Width, axYimaEnc.Height));
+            hwndRenderTarget.BeginDraw();
+            //hwndRenderTarget.Clear(new SharpDX.Mathematics.Interop.RawColor4(1, 0, 1, 1));
+            SharpDX.Mathematics.Interop.RawRectangleF rect = new SharpDX.Mathematics.Interop.RawRectangleF(0, 0, 400, 400);
+            SharpDX.Direct2D1.Brush b = new SharpDX.Direct2D1.SolidColorBrush(hwndRenderTarget, new SharpDX.Mathematics.Interop.RawColor4(1, 0, 1, 1));
+            hwndRenderTarget.FillRectangle(rect, b);
+            //hwndRenderTarget.Flush();
+            hwndRenderTarget.EndDraw();
+
             do
             {
                 try
@@ -305,14 +350,14 @@ namespace YimaWF
                         DrawPipeline(g, p);
 
                     //多边形保护区绘制模式
-                    if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
+                    if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_FORBIDDEN_ZONE))
                     {
                         //绘制当前正在添加的多边形禁止驶入区
                         DrawForbiddenZone(g, curForbiddenZone, false);
                         break;
                     }
                     //管道绘制模式
-                    if(IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
+                    if (IsOnOperation(CURRENT_SUB_OPERATION.ADD_PIPELINE))
                     {
                         DrawPipeline(g, curPipeline);
                         break;
@@ -342,7 +387,7 @@ namespace YimaWF
                     if (showAISTarget)
                         foreach (var t in AISTargetDic.Values)
                         {
-                            if(t.IsSelected == true)
+                            if (t.IsSelected == true)
                             {
                                 selectedTarget = t;
                                 continue;
@@ -397,7 +442,7 @@ namespace YimaWF
                     }
                     if (showOpt)
                         drawOptScan(g, optStartAngle);
-                    if(IsOnOperation(CURRENT_SUB_OPERATION.AREA_ZOOM))
+                    if (IsOnOperation(CURRENT_SUB_OPERATION.AREA_ZOOM))
                     {
                         DrawAreaZoomRect(g);
                     }
@@ -407,6 +452,8 @@ namespace YimaWF
                     Invalidate();
                 }
             } while (false);
+
+
             g.Dispose();
             isUpdate = true;
         }
@@ -710,6 +757,27 @@ namespace YimaWF
             }
         }
 
+        //private void DrawForbiddenZone(Graphics g, ForbiddenZone fz, bool drawPolygon)
+        //{
+        //    var pen = new Pen(AppConfig.ProtectZonePen);
+        //    pen.DashStyle = DashStyle.Custom;
+        //    pen.DashPattern = new float[] { 5, 5 };
+
+        //    int curX = 0, curY = 0;
+        //    List<Point> list = new List<Point>();
+        //    foreach (var p in fz.PointList)
+        //    {
+        //        axYimaEnc.GetScrnPoFromGeoPo(p.x, p.y, ref curX, ref curY);
+        //        list.Add(new Point(curX, curY));
+        //        Rectangle rect = new Rectangle(curX - 4, curY - 4, 8, 8);
+        //        g.FillEllipse(new SolidBrush(pen.Color), rect);
+        //    }
+        //    if (drawPolygon)
+        //        g.DrawPolygon(pen, list.ToArray());
+        //    else
+        //        g.DrawLines(pen, list.ToArray());
+        //}
+
         private void DrawForbiddenZone(Graphics g, ForbiddenZone fz, bool drawPolygon)
         {
             var pen = new Pen(AppConfig.ProtectZonePen);
@@ -893,6 +961,8 @@ namespace YimaWF
             axYimaEnc.Width = ClientRect.Width = ClientSize.Width;
 
             axYimaEnc.RefreshDrawer(axYimaEnc.Handle.ToInt32(), axYimaEnc.Width, axYimaEnc.Height, 0, 0);
+            //if(hwndRenderTarget != null)
+            //    hwndRenderTarget.Resize(new SharpDX.Size2(axYimaEnc.Width, axYimaEnc.Height));
             Invalidate();
         }
 
@@ -1813,7 +1883,7 @@ namespace YimaWF
                 Brush statusBrush = Brushes.Black;
                 SizeF size;
                 size = g.MeasureString(p.Time, AppConfig.TargetStatusFont);
-                RectangleF statusRect = new RectangleF(curX + TargetRectFactor, curY, size.Height, size.Width);
+                RectangleF statusRect = new RectangleF(curX + TargetRectFactor, curY, size.Width, size.Height);
 
 
                 g.DrawString(p.Time, AppConfig.TargetStatusFont, statusBrush, statusRect);
