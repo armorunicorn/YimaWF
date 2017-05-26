@@ -155,8 +155,26 @@ namespace YimaWF.data
 
         #region 雷达数据
         //雷达ID
-        public int RadarID { get; set; }
-        public int RadarBatchNum { get; set; }
+        private int radarID;
+        public int RadarID
+        {
+            get { return radarID; }
+            set
+            {
+                radarID = value;
+                NotifyPropertyChanged("RadarID");
+            }
+        }
+        private int radarBatchNum;
+        public int RadarBatchNum
+        {
+            get { return radarBatchNum; }
+            set
+            {
+                radarBatchNum = value;
+                NotifyPropertyChanged("RadarBatchNum");
+            }
+        }
         #endregion
 
         #region AIS数据
@@ -330,8 +348,26 @@ namespace YimaWF.data
         }
         public int AlarmID { get; set; }
 
-        public int RadarID2 { get; set; }
-        public int RadarBatchNum2 { get; set; }
+        private int radarID2;
+        public int RadarID2
+        {
+            get { return radarID2; }
+            set
+            {
+                radarID2 = value;
+                NotifyPropertyChanged("RadarID2");
+            }
+        }
+        private int radarBatchNum2;
+        public int RadarBatchNum2
+        {
+            get { return radarBatchNum2; }
+            set
+            {
+                radarBatchNum2 = value;
+                NotifyPropertyChanged("RadarBatchNum2");
+            }
+        }
         #endregion
 
 
