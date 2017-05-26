@@ -24,6 +24,10 @@ using DXGIDevice = SharpDX.DXGI.Device;
 using DXGIFactory = SharpDX.DXGI.Factory;
 using Factory = SharpDX.Direct2D1.Factory;
 using PixelFormat = SharpDX.WIC.PixelFormat;
+using D2DColor = SharpDX.Mathematics.Interop.RawColor4;
+using D2DSolidBrush = SharpDX.Direct2D1.SolidColorBrush;
+using D2DEllipse = SharpDX.Direct2D1.Ellipse;
+using D2DPoint = SharpDX.Mathematics.Interop.RawVector2;
 
 namespace YimaWF
 {
@@ -330,7 +334,6 @@ namespace YimaWF
             hwndRenderTarget.FillRectangle(rect, b);
             //hwndRenderTarget.Flush();
             hwndRenderTarget.EndDraw();
-
             do
             {
                 try
@@ -453,7 +456,7 @@ namespace YimaWF
                 }
             } while (false);
 
-
+            //hwndRenderTarget.EndDraw();
             g.Dispose();
             isUpdate = true;
         }
@@ -757,27 +760,6 @@ namespace YimaWF
             }
         }
 
-        //private void DrawForbiddenZone(Graphics g, ForbiddenZone fz, bool drawPolygon)
-        //{
-        //    var pen = new Pen(AppConfig.ProtectZonePen);
-        //    pen.DashStyle = DashStyle.Custom;
-        //    pen.DashPattern = new float[] { 5, 5 };
-
-        //    int curX = 0, curY = 0;
-        //    List<Point> list = new List<Point>();
-        //    foreach (var p in fz.PointList)
-        //    {
-        //        axYimaEnc.GetScrnPoFromGeoPo(p.x, p.y, ref curX, ref curY);
-        //        list.Add(new Point(curX, curY));
-        //        Rectangle rect = new Rectangle(curX - 4, curY - 4, 8, 8);
-        //        g.FillEllipse(new SolidBrush(pen.Color), rect);
-        //    }
-        //    if (drawPolygon)
-        //        g.DrawPolygon(pen, list.ToArray());
-        //    else
-        //        g.DrawLines(pen, list.ToArray());
-        //}
-
         private void DrawForbiddenZone(Graphics g, ForbiddenZone fz, bool drawPolygon)
         {
             var pen = new Pen(AppConfig.ProtectZonePen);
@@ -798,6 +780,51 @@ namespace YimaWF
             else
                 g.DrawLines(pen, list.ToArray());
         }
+
+        //private void DrawForbiddenZone(Graphics g, ForbiddenZone fz, bool drawPolygon)
+        //{
+        //    var pen = new Pen(AppConfig.ProtectZonePen);
+        //    pen.DashStyle = DashStyle.Custom;
+        //    pen.DashPattern = new float[] { 5, 5 };
+
+        //    D2DSolidBrush b = new D2DSolidBrush(hwndRenderTarget, Convert2D2DColor(AppConfig.ProtectZonePen.R, AppConfig.ProtectZonePen.G, AppConfig.ProtectZonePen.B, AppConfig.ProtectZonePen.A));
+        //    int curX = 0, curY = 0;
+        //    D2DPoint lastdp = new D2DPoint(0, 0);
+        //    D2DPoint curdp;
+        //    D2DPoint firstdp = new D2DPoint(0, 0);
+        //    bool isfirst = true;
+        //    SharpDX.Direct2D1.StrokeStyleProperties ssProps = new SharpDX.Direct2D1.StrokeStyleProperties();
+        //    ssProps.StartCap = SharpDX.Direct2D1.CapStyle.Round;
+        //    ssProps.EndCap = SharpDX.Direct2D1.CapStyle.Round;
+        //    ssProps.DashOffset = 0.1f;
+        //    ssProps.DashStyle = SharpDX.Direct2D1.DashStyle.Dash;
+
+
+        //    SharpDX.Direct2D1.StrokeStyle myStyle = new SharpDX.Direct2D1.StrokeStyle(hwndRenderTarget.Factory, ssProps);
+        //    foreach (var p in fz.PointList)
+        //    {
+        //        axYimaEnc.GetScrnPoFromGeoPo(p.x, p.y, ref curX, ref curY);
+        //        //list.Add(new Point(curX, curY));
+        //        //Rectangle rect = new Rectangle(curX - 4, curY - 4, 8, 8);
+        //        curdp.X = curX;
+        //        curdp.Y = curY;
+        //        //g.FillEllipse(new SolidBrush(pen.Color), rect);
+        //        hwndRenderTarget.FillEllipse(new D2DEllipse(curdp, 4, 4), b);
+        //        if (!isfirst)
+        //        {
+        //            hwndRenderTarget.DrawLine(lastdp, curdp, b, 2, myStyle);
+        //        }
+        //        else
+        //        {
+        //            isfirst = false;
+        //            firstdp.X = curX;
+        //            firstdp.Y = curY;
+        //        }
+        //        lastdp.X = curX;
+        //        lastdp.Y = curY;
+        //    }
+        //    hwndRenderTarget.DrawLine(lastdp, firstdp, b, 2, myStyle);
+        //}
 
         private void DrawPipeline(Graphics g, Pipeline p)
         {
@@ -3223,6 +3250,11 @@ namespace YimaWF
         private double KM2NM(double km)
         {
             return km / 1.852;
+        }
+
+        private D2DColor Convert2D2DColor(int r, int g, int b, int a)
+        {
+            return new D2DColor(r / 255f, g / 255f, b / 255f, a / 255f);
         }
     }
 }
