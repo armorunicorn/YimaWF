@@ -78,7 +78,7 @@ namespace YimaWF.data
                 NotifyPropertyChanged("Distance");
             }
         }
-
+        //真北
         private double north;
         public double North
         {
@@ -161,9 +161,36 @@ namespace YimaWF.data
 
         #region AIS数据
         public bool ShowSpeedLine = false;
-        public uint IMO { get; set; }
-        public string MIMSI { get; set; }
-        public string CallSign { get; set; }
+        private uint imo;
+        public uint IMO
+        {
+            get { return imo; }
+            set
+            {
+                imo = value;
+                NotifyPropertyChanged("IMO");
+            }
+        }
+        private string mmsi;
+        public string MIMSI
+        {
+            get { return mmsi; }
+            set
+            {
+                mmsi = value;
+                NotifyPropertyChanged("MIMSI");
+            }
+        }
+        private string callSign;
+        public string CallSign
+        {
+            get { return callSign; }
+            set
+            {
+                callSign = value;
+                NotifyPropertyChanged("CallSign");
+            }
+        }
         //国籍
         public string Nationality { get; set; }
         //public string Date;
@@ -205,21 +232,57 @@ namespace YimaWF.data
             }
         }
         //航行状态
-        public byte SailStatus { get; set; }
+        public byte sailStatus;
+        public byte SailStatus
+        {
+            get { return sailStatus; }
+            set
+            {
+                sailStatus = value;
+                NotifyPropertyChanged("SailStatus");
+            }
+        }
         //最大吃水深度
         public float MaxDeep { get; set; }
         //船载人数
         public uint Capacity { get; set; }
         //目的地
-        public string Destination { get; set; }
+        private string destination;
+        public string Destination
+        {
+            get { return destination; }
+            set
+            {
+                destination = value;
+                NotifyPropertyChanged("Destination");
+            }
+        }
         public int AISType { get; set; }
         #endregion
 
         #region  融合数据
         //融合数据类型
-        public byte DataType { get; set; }
+        public byte dataType;
+        public byte DataType
+        {
+            get { return dataType; }
+            set
+            {
+                dataType = value;
+                NotifyPropertyChanged("DataType");
+            }
+        }
         //子源个数
-        public byte SrcNum { get; set; }
+        private byte srcNum;
+        public byte SrcNum
+        {
+            get { return srcNum; }
+            set
+            {
+                srcNum = value;
+                NotifyPropertyChanged("SrcNum");
+            }
+        }
         //告警类型
         private AlarmType alarm = AlarmType.None;
         public AlarmType Alarm
