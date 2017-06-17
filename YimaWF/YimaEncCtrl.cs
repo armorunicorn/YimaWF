@@ -85,6 +85,7 @@ namespace YimaWF
         private Image alarm2Img;
         private Image alarm3Img;
         private Image alarm4Img;
+        private Image whiteAlarmImg;
         private ForbiddenZone curForbiddenZone;
         private Pipeline curPipeline;
         //目标图片切换的比例尺
@@ -170,6 +171,9 @@ namespace YimaWF
         public bool ShowRadarTargetStatus = true;
         public bool ShowAISTargetStatus = true;
         public bool ShowMergeTargetStatus = true;
+        public bool ShowSuspiciousTarget = true;
+        public bool ShowNormalTarget = true;
+        public bool ShowUnknowTarget = true;
         #endregion
 
         #region 数据回放
@@ -230,6 +234,7 @@ namespace YimaWF
             alarm2Img = Resources.Alarm2;
             alarm3Img = Resources.Alarm3;
             alarm4Img = Resources.Alarm4;
+            whiteAlarmImg = Resources.WhiteListAlarm;
             //测试代码
         }
 
@@ -415,6 +420,21 @@ namespace YimaWF
         {
             if (t.Track.Count == 0)
                 return;
+            switch(t.Type)
+            {
+                case TargetType.Normal:
+                    if (!ShowNormalTarget)
+                        return;
+                    break;
+                case TargetType.Suspicious:
+                    if (!ShowSuspiciousTarget)
+                        return;
+                    break;
+                case TargetType.Unknow:
+                    if (!ShowUnknowTarget)
+                        break;
+                    break;
+            }
             Color c = AppConfig.TargetColor[t.Type];
             if (t.Source != TargetSource.AIS)
             {
@@ -489,6 +509,9 @@ namespace YimaWF
                                 break;
                             case AlarmType.EarlyWarningArea:
                                 g.DrawImage(alarm4Img, rect);
+                                break;
+                            case AlarmType.WhiteList:
+                                g.DrawImage(whiteAlarmImg, rect);
                                 break;
                             default:
                                 g.DrawImage(alarmImg, rect);
@@ -1153,12 +1176,17 @@ namespace YimaWF
                     var t = GetClickTarget(e.Location);
                     if(t != null)
                     {
-                        TargetCenter(t);
+                        //TargetCenter(t);
                         //CurSelectedTarget = t;
                         //t.IsSelected = true;
                         //t.ShowSignTime = MaxShowTargetTime;
-                        
+
                         //TargetSelect?.Invoke(t);
+                        if (CurSelectedTarget != null && AutoTrackTarget != null)
+                        {
+                            var list = GetTargetLocation(CurSelectedTarget);
+                            AutoTrackTarget?.Invoke(CurSelectedTarget, list[0], list[1]);
+                        }
                     }
                 }
             }
@@ -1595,6 +1623,24 @@ namespace YimaWF
                 t.ShowStatus = ShowMergeTargetStatusToolStripMenuItem.Checked;
             }
         }
+
+        private void ShowSuspiciousToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SetDisplayMode(TARGET_TYPE.SUSPICIOUS, !ShowSuspiciousTarget);
+            Invalidate();
+        }
+
+        private void ShowUnknowToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SetDisplayMode(TARGET_TYPE.UNKNOW, !ShowUnknowTarget);
+            Invalidate();
+        }
+
+        private void ShowNormalToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SetDisplayMode(TARGET_TYPE.NORMAL, !ShowNormalTarget);
+            Invalidate();
+        }
         #endregion
         #region 多边形区域绘制右键菜单
         private void CancelAdd_Click(object sender, EventArgs e)
@@ -1675,7 +1721,7 @@ namespace YimaWF
                 TargetCenter(CurSelectedTarget);
             }
         }
-
+        //自动联动菜单响应函数（菜单项去掉了）
         private void AutoTrackToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (CurSelectedTarget != null && AutoTrackTarget != null)
@@ -1684,7 +1730,7 @@ namespace YimaWF
                 AutoTrackTarget?.Invoke(CurSelectedTarget, list[0], list[1]);
             }
         }
-
+        //手动联动菜单响应函数（菜单项去掉了）
         private void ManualTrackToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (CurSelectedTarget != null && ManualTrackTarget != null)
@@ -1813,7 +1859,7 @@ namespace YimaWF
                 Brush statusBrush = Brushes.Black;
                 SizeF size;
                 size = g.MeasureString(p.Time, AppConfig.TargetStatusFont);
-                RectangleF statusRect = new RectangleF(curX + TargetRectFactor, curY, size.Height, size.Width);
+                RectangleF statusRect = new RectangleF(curX + TargetRectFactor, curY, size.Width, size.Height);
 
 
                 g.DrawString(p.Time, AppConfig.TargetStatusFont, statusBrush, statusRect);
@@ -1932,6 +1978,18 @@ namespace YimaWF
                 case TARGET_TYPE.OPTLINE:
                     ShowOptLineToolStripMenuItem.Checked = isShow;
                     showOpt = isShow;
+                    break;
+                case TARGET_TYPE.SUSPICIOUS:
+                    ShowSuspiciousToolStripMenuItem.Checked = isShow;
+                    ShowSuspiciousTarget = isShow;
+                    break;
+                case TARGET_TYPE.NORMAL:
+                    ShowNormalToolStripMenuItem.Checked = isShow;
+                    ShowNormalTarget = isShow;
+                    break;
+                case TARGET_TYPE.UNKNOW:
+                    ShowUnknowToolStripMenuItem.Checked = isShow;
+                    ShowUnknowTarget = isShow;
                     break;
             }
         }
@@ -2856,7 +2914,7 @@ namespace YimaWF
             if (t.Alarm != AlarmType.None)
             {
                 tmp.Alarm = t.Alarm;
-                tmp.AlarmID = t.AlarmID;
+                tmp.AlarmAreaID = t.AlarmAreaID;
                 tmp.AlarmTime = t.AlarmTime;
                 AlarmTargetList.Add(tmp);
             }
@@ -2905,7 +2963,7 @@ namespace YimaWF
             tmp.RadarBatchNum = t.RadarBatchNum;
             tmp.RadarBatchNum2 = t.RadarBatchNum2;
             tmp.IsApproach = CheckTargetApproach(tmp.Track.Last().Point, longitude, latitude);
-            UpdateAlarmStatus(tmp, t.Alarm, t.AlarmID, t.AlarmTime);
+            UpdateAlarmStatus(tmp, t.Alarm, t.AlarmAreaID, t.AlarmTime);
             AddPointToTargetTrack(tmp, t.UpdateTime, t.Course, longitude, latitude);
             if (tmp.Action != AlarmAction.None)
             {
@@ -3085,7 +3143,7 @@ namespace YimaWF
                 }
             }
             t.Alarm = alarm;
-            t.AlarmID = alarmID;
+            t.AlarmAreaID = alarmID;
             if(alarmTime != null)
                 t.AlarmTime = alarmTime;
         }
@@ -3154,5 +3212,7 @@ namespace YimaWF
         {
             return km / 1.852;
         }
+
+        
     }
 }

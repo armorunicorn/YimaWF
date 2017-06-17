@@ -24,6 +24,7 @@ namespace YimaWF.data
         EarlyWarningArea, //预警区告警 - level 4
         ForbiddenZone, //多边形保护区告警 - level 4
         Pipeline, //管道告警 - level 4
+        WhiteList, //白名单告警
         Checked  //已确认（不再显示）
     }
 
@@ -346,7 +347,16 @@ namespace YimaWF.data
                 NotifyPropertyChanged("AlarmTime");
             }
         }
-        public int AlarmID { get; set; }
+        private int alarmAreaID;
+        public int AlarmAreaID
+        {
+            get { return alarmAreaID; }
+            set
+            {
+                alarmAreaID = value;
+                NotifyPropertyChanged("AlarmAreaID");
+            }
+        }
 
         private int radarID2;
         public int RadarID2

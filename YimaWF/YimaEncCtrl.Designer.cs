@@ -58,6 +58,9 @@
             this.CancelAdd = new System.Windows.Forms.ToolStripMenuItem();
             this.CancelPoint = new System.Windows.Forms.ToolStripMenuItem();
             this.EndAdd = new System.Windows.Forms.ToolStripMenuItem();
+            this.ShowSuspiciousToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.ShowUnknowToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.ShowNormalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.axYimaEnc)).BeginInit();
             this.statusStrip1.SuspendLayout();
             this.targetContextMenu.SuspendLayout();
@@ -175,9 +178,12 @@
             this.ShowSpeedLineToolStripMenuItem,
             this.ShowRadarTargetStatusToolStripMenuItem,
             this.ShowAISTargetStatusToolStripMenuItem,
-            this.ShowMergeTargetStatusToolStripMenuItem});
+            this.ShowMergeTargetStatusToolStripMenuItem,
+            this.ShowSuspiciousToolStripMenuItem,
+            this.ShowUnknowToolStripMenuItem,
+            this.ShowNormalToolStripMenuItem});
             this.normalContextMenu.Name = "normalContextMenu";
-            this.normalContextMenu.Size = new System.Drawing.Size(173, 224);
+            this.normalContextMenu.Size = new System.Drawing.Size(173, 312);
             // 
             // ShowRadarTargetItem
             // 
@@ -293,6 +299,33 @@
             this.EndAdd.Text = "完成绘制";
             this.EndAdd.Click += new System.EventHandler(this.EndAdd_Click);
             // 
+            // ShowSuspiciousToolStripMenuItem
+            // 
+            this.ShowSuspiciousToolStripMenuItem.Checked = true;
+            this.ShowSuspiciousToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.ShowSuspiciousToolStripMenuItem.Name = "ShowSuspiciousToolStripMenuItem";
+            this.ShowSuspiciousToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.ShowSuspiciousToolStripMenuItem.Text = "可疑目标显示";
+            this.ShowSuspiciousToolStripMenuItem.Click += new System.EventHandler(this.ShowSuspiciousToolStripMenuItem_Click);
+            // 
+            // ShowUnknowToolStripMenuItem
+            // 
+            this.ShowUnknowToolStripMenuItem.Checked = true;
+            this.ShowUnknowToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.ShowUnknowToolStripMenuItem.Name = "ShowUnknowToolStripMenuItem";
+            this.ShowUnknowToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.ShowUnknowToolStripMenuItem.Text = "未知目标显示";
+            this.ShowUnknowToolStripMenuItem.Click += new System.EventHandler(this.ShowUnknowToolStripMenuItem_Click);
+            // 
+            // ShowNormalToolStripMenuItem
+            // 
+            this.ShowNormalToolStripMenuItem.Checked = true;
+            this.ShowNormalToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.ShowNormalToolStripMenuItem.Name = "ShowNormalToolStripMenuItem";
+            this.ShowNormalToolStripMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.ShowNormalToolStripMenuItem.Text = "通常目标显示";
+            this.ShowNormalToolStripMenuItem.Click += new System.EventHandler(this.ShowNormalToolStripMenuItem_Click);
+            // 
             // YimaEncCtrl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -342,5 +375,8 @@
         private System.Windows.Forms.ToolStripMenuItem ShowRadarTargetStatusToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ShowAISTargetStatusToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ShowMergeTargetStatusToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem ShowSuspiciousToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem ShowUnknowToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem ShowNormalToolStripMenuItem;
     }
 }

@@ -77,7 +77,10 @@
         AIS,
         MERGER,
         RADARLINE,
-        OPTLINE
+        OPTLINE,
+        SUSPICIOUS,
+        UNKNOW,
+        NORMAL,
     }
 
     //移动海图的方向
